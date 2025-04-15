@@ -17,8 +17,8 @@ LogBox.ignoreLogs(['AsyncStorage has been extracted from react-native core']);
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <NotificationProvider>
+    <NotificationProvider>
+      <SafeAreaProvider>
         {/* Envuelve todo con PlayerProvider */}
         <PlayerProvider>
           <PokedexProvider>
@@ -31,7 +31,7 @@ export default function RootLayout() {
             </BackpackProvider>
           </PokedexProvider>
         </PlayerProvider>
-      </NotificationProvider>
-    </SafeAreaProvider>
+      </SafeAreaProvider>
+    </NotificationProvider>
   );
 }

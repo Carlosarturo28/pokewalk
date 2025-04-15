@@ -189,7 +189,7 @@ export default function ProfileScreen() {
               />
             </TouchableOpacity>
           </View>
-          <Text style={styles.levelText}>Nivel: {playerStats.level}</Text>
+          <Text style={styles.levelText}> {playerStats.level}</Text>
           <XPProgressBar
             currentXP={playerStats.currentXP}
             xpToNextLevel={playerStats.xpToNextLevel}

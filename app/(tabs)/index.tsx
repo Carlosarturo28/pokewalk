@@ -153,7 +153,7 @@ export default function CaminataScreen() {
                 {playerStats.playerName}
               </Text>
               <Text style={styles.playerLevelText}>
-                Nivel: {playerStats.level}
+                Nivel {playerStats.level}
               </Text>
               <MiniXPBar
                 currentXP={playerStats.currentXP}

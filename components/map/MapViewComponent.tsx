@@ -95,7 +95,7 @@ export const MapViewComponent: React.FC<Props> = ({ onEncounterPress }) => {
           let markerOpacity = 1.0;
           if (pokemonEncounter.caught) {
             borderColor = '#4CAF50';
-            markerOpacity = 0.6;
+            markerOpacity = 1;
           }
           return (
             <Marker

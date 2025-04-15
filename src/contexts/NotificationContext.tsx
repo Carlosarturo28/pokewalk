@@ -5,27 +5,38 @@ import React, {
   useContext,
   useRef,
   useCallback,
-  ReactNode,
   useEffect,
+  ReactNode,
 } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Platform,
+  ImageSourcePropType,
+  Modal, // <-- Importar Modal de nuevo
+  TouchableWithoutFeedback, // <-- Necesario para cerrar al tocar fuera (opcional)
+} from 'react-native';
+import * as Animatable from 'react-native-animatable';
 import {
   NotificationConfig,
   NotificationState,
   NotificationType,
 } from '../types/Notification';
 
+// --- Interfaz del Contexto ---
 interface NotificationContextProps {
-  showNotification: (config: Omit<NotificationConfig, 'id'>) => void; // No requiere ID externo
-  // Estado actual (opcional exponerlo si otro componente lo necesita)
-  // currentNotification: NotificationState | null;
+  showNotification: (config: Omit<NotificationConfig, 'id'>) => void;
 }
 
 const NotificationContext = createContext<NotificationContextProps | undefined>(
   undefined
 );
 
-const DEFAULT_DURATION = 3500; // ms
+const DEFAULT_DURATION = 3500;
 
+// --- Provider ---
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
@@ -33,30 +44,29 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     useState<NotificationState | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Oculta la notificación (cambia isVisible)
   const hideNotification = useCallback(() => {
     setCurrentNotification((prev) =>
       prev ? { ...prev, isVisible: false } : null
     );
-    // Podríamos añadir un pequeño delay aquí antes de ponerlo a null si queremos animación de salida
-    // setTimeout(() => setCurrentNotification(null), 500); // Ejemplo delay
   }, []);
 
+  // Muestra una nueva notificación
   const showNotification = useCallback(
     (config: Omit<NotificationConfig, 'id'>) => {
-      // Limpia el timeout anterior si existiera
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
 
       const newNotification: NotificationState = {
         ...config,
-        id: `notif-${Date.now()}-${Math.random()}`, // Genera ID único
-        isVisible: true,
+        id: `notif-${Date.now()}-${Math.random()}`,
+        isVisible: true, // Marcar como visible para que NotificationDisplay reaccione
       };
 
       setCurrentNotification(newNotification);
 
-      // Establece el timeout para ocultar automáticamente
+      // Programa el ocultamiento automático
       const duration = config.duration ?? DEFAULT_DURATION;
       timeoutRef.current = setTimeout(() => {
         hideNotification();
@@ -65,7 +75,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     [hideNotification]
   );
 
-  // Limpia el timeout si el provider se desmonta
+  // Limpia timeout al desmontar
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -74,21 +84,18 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
-  // Nota: No estamos exponiendo `currentNotification` directamente en el valor
-  // del contexto porque solo el componente `NotificationDisplay` lo necesita.
-  // Si otros componentes necesitaran reaccionar al estado, lo añadiríamos aquí.
   const value = { showNotification };
 
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      {/* El componente que muestra la notificación se renderiza aquí */}
+      {/* Renderiza el componente de display aquí */}
       <NotificationDisplay notification={currentNotification} />
     </NotificationContext.Provider>
   );
 };
 
-// Hook para usar el contexto
+// --- Hook ---
 export const useNotification = (): NotificationContextProps => {
   const context = useContext(NotificationContext);
   if (!context) {
@@ -99,90 +106,89 @@ export const useNotification = (): NotificationContextProps => {
   return context;
 };
 
-// --- Componente Interno para Mostrar la Notificación ---
-// (Lo ponemos aquí para mantenerlo encapsulado, o puede ir en /components)
+// --- Componente NotificationDisplay (AHORA CON MODAL) ---
 
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Modal,
-  TouchableWithoutFeedback,
-} from 'react-native';
-import * as Animatable from 'react-native-animatable'; // Necesitarás instalarla: npm i react-native-animatable
-
-// Mapeo de tipos a colores/iconos (similar a CustomToast)
 const notificationStyles = {
-  success: { backgroundColor: '#DCEDC8', borderColor: '#7CB342' }, // Verde más claro
-  error: { backgroundColor: '#FFCDD2', borderColor: '#E57373' }, // Rojo más claro
-  info: { backgroundColor: '#BBDEFB', borderColor: '#64B5F6' }, // Azul más claro
-  warning: { backgroundColor: '#FFF9C4', borderColor: '#FFD54F' }, // Amarillo
+  success: { backgroundColor: '#DCEDC8', borderColor: '#7CB342' },
+  error: { backgroundColor: '#FFCDD2', borderColor: '#E57373' },
+  info: { backgroundColor: '#BBDEFB', borderColor: '#64B5F6' },
+  warning: { backgroundColor: '#FFF9C4', borderColor: '#FFD54F' },
 };
 
 const NotificationDisplay: React.FC<{
   notification: NotificationState | null;
 }> = ({ notification }) => {
   const [internalVisible, setInternalVisible] = useState(false);
-  const viewRef = useRef<Animatable.View & View>(null); // Ref para animaciones
+  const viewRef = useRef<Animatable.View & View>(null);
 
   useEffect(() => {
+    // Si la notificación del contexto debe ser visible...
     if (notification?.isVisible) {
-      setInternalVisible(true); // Muestra inmediatamente al recibir notificación
-    } else if (internalVisible && viewRef.current) {
-      // Si estaba visible pero la notificación ya no (timeout), ejecuta animación de salida
+      // Si no está visible internamente, hazla visible (esto abre el Modal)
+      if (!internalVisible) {
+        setInternalVisible(true);
+      }
+    }
+    // Si la notificación del contexto NO debe ser visible, pero internamente SÍ lo está...
+    else if (internalVisible && viewRef.current) {
+      // Ejecuta animación de salida ANTES de cerrar el Modal
       viewRef.current
-        .animate('fadeOutDown', 500) // O 'fadeOutUp', 'zoomOut', etc.
-        .then(() => setInternalVisible(false)); // Oculta *después* de la animación
-    } else {
-      // Si no hay notificación o ya se ocultó internamente
+        .animate('fadeOutDown', 300) // Animación más rápida
+        .then(() => setInternalVisible(false)); // Cierra el Modal después
+    }
+    // Asegurar que esté cerrado si no hay notificación
+    else if (!notification && internalVisible) {
       setInternalVisible(false);
     }
-  }, [notification?.isVisible, internalVisible]); // Depende de la visibilidad del contexto
+  }, [notification, internalVisible]); // Reacciona a cambios en la notificación del contexto
 
-  if (!internalVisible || !notification) {
-    return null; // No renderizar nada si no está visible
+  // La visibilidad del MODAL ahora depende de internalVisible
+  if (!notification && !internalVisible) {
+    // No renderizar si no hay notif y ya se ocultó
+    return null;
   }
 
+  // Solo necesitamos los datos de la notificación si vamos a renderizar el modal
+  const currentNotifData = notification ?? ({} as Partial<NotificationState>); // Usa datos actuales o vacío
   const stylesForType =
-    notificationStyles[notification.type] || notificationStyles.info;
-
-  // Animación de entrada diferente según el tipo? O una estándar.
-  const entryAnimation = 'bounceInUp'; // Ej: 'fadeInUp', 'zoomIn', 'bounceIn'
+    notificationStyles[currentNotifData.type ?? 'info'] ||
+    notificationStyles.info;
+  const entryAnimation = 'fadeInUp';
 
   return (
-    // Usamos un Modal transparente para superponer sobre todo
+    // --- USA EL MODAL DE REACT NATIVE ---
     <Modal
       transparent={true}
-      visible={internalVisible} // Controlado por estado interno para animación de salida
-      animationType='none' // Las animaciones las maneja Animatable
+      visible={internalVisible} // Controlado por estado interno
+      animationType='none' // Deshabilita animación nativa del modal
       onRequestClose={() => {
-        /* Podríamos permitir cerrar con botón atrás? */
+        // Podríamos forzar el cierre aquí si el usuario presiona atrás en Android
+        // setCurrentNotification(prev => prev ? { ...prev, isVisible: false } : null);
+        // setInternalVisible(false);
       }}
     >
-      {/* Fondo semi-transparente opcional */}
-      {/* <View style={styles.modalBackground} /> */}
-
-      {/* Usamos TouchableWithoutFeedback para detectar toques fuera (y no hacer nada) */}
-      <TouchableWithoutFeedback
-        onPress={() => {
-          /* No cerrar al tocar fuera */
-        }}
-      >
-        <View style={styles.modalCenteredView} pointerEvents='box-none'>
-          {/* Vista animada */}
+      {/* Contenedor que permite centrar y no bloquea toques fuera de la notificación en sí */}
+      <View style={styles.modalOuterContainer} pointerEvents='box-none'>
+        {/* Contenedor interno para posicionar (abajo en este caso) */}
+        <View style={styles.modalPositioner} pointerEvents='box-none'>
+          {/* Vista Animable con el contenido */}
           <Animatable.View
             ref={viewRef}
-            animation={entryAnimation}
-            duration={600}
+            // Solo ejecuta animación de entrada si acabamos de volvernos visibles
+            animation={
+              internalVisible && notification?.isVisible
+                ? entryAnimation
+                : undefined
+            }
+            duration={500}
             style={[styles.notificationContainer, stylesForType]}
-            pointerEvents='auto' // Permite tocar la notificación si tuviera botones
+            pointerEvents='auto' // La notificación SÍ es interactuable
           >
             {/* Imagen */}
-            {notification.imageSource && (
+            {currentNotifData.imageSource && (
               <View style={styles.imageContainer}>
                 <Image
-                  source={notification.imageSource}
+                  source={currentNotifData.imageSource}
                   style={styles.image}
                   resizeMode='contain'
                 />
@@ -190,42 +196,47 @@ const NotificationDisplay: React.FC<{
             )}
             {/* Textos */}
             <View style={styles.textContainer}>
-              <Text style={styles.title}>{notification.title}</Text>
-              {notification.message && (
-                <Text style={styles.message}>{notification.message}</Text>
+              <Text style={styles.title}>{currentNotifData.title ?? ''}</Text>
+              {currentNotifData.message && (
+                <Text style={styles.message}>{currentNotifData.message}</Text>
               )}
             </View>
           </Animatable.View>
         </View>
-      </TouchableWithoutFeedback>
+      </View>
     </Modal>
   );
 };
 
 // --- Estilos para NotificationDisplay ---
 const styles = StyleSheet.create({
-  modalBackground: {
-    // Fondo opcional para oscurecer
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.1)', // Muy sutil
-  },
-  modalCenteredView: {
-    // Contenedor que centra el modal
+  // Contenedor externo del Modal, ocupa todo y permite pasar toques
+  modalOuterContainer: {
     flex: 1,
-    justifyContent: 'flex-end', // Posiciona abajo
-    // justifyContent: 'center', // O centrado
-    alignItems: 'center',
-    paddingBottom: 50, // Margen inferior
-    // paddingHorizontal: 20, // Si está centrado
+    // backgroundColor: 'rgba(0, 0, 0, 0.1)', // Fondo opcional si quieres oscurecer un poco
   },
+  // Contenedor interno para posicionar la notificación (abajo y centrada)
+  modalPositioner: {
+    flex: 1, // Ocupa espacio disponible
+    justifyContent: 'flex-end', // Alinea abajo
+    alignItems: 'center', // Centra horizontalmente
+    // Espaciado desde el borde inferior (considera altura de tab bar)
+    paddingBottom: Platform.select({
+      ios: 80,
+      android: 60,
+    }),
+    paddingHorizontal: 10, // Padding horizontal para que no pegue a los bordes
+  },
+  // Estilos de la tarjeta de notificación visible
   notificationContainer: {
     flexDirection: 'row',
-    width: '90%', // Ancho del 'modal'
-    maxWidth: 400, // Ancho máximo
+    width: '100%', // Ocupa el ancho disponible dentro del positioner (con padding)
+    maxWidth: 450,
     padding: 15,
     borderRadius: 12,
-    borderWidth: 1.5, // Borde más grueso
-    // Estilos base de sombra (iguales que CustomToast)
+    borderWidth: 1.5,
+    backgroundColor: 'white', // Fondo blanco por defecto (sobrescrito por tipo)
+    // Sombra
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
@@ -234,7 +245,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   imageContainer: {
-    width: 45, // Un poco más grande
+    width: 45,
     height: 45,
     justifyContent: 'center',
     alignItems: 'center',
@@ -249,13 +260,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   title: {
-    fontSize: 16, // Ligeramente más grande
+    fontSize: 16,
     fontWeight: 'bold',
-    color: '#111', // Casi negro para buen contraste
+    color: '#111',
   },
   message: {
-    fontSize: 14, // Ligeramente más grande
-    color: '#444', // Gris oscuro
+    fontSize: 14,
+    color: '#444',
     marginTop: 3,
   },
 });

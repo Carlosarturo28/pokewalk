@@ -226,7 +226,11 @@ export default function PokemonDetailScreen() {
         {/* Sección Descripción */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Descripción Pokédex</Text>
-          <Text style={styles.descriptionText}>{description}</Text>
+          <Text style={styles.descriptionText}>
+            {pokedexInfo?.status === PokedexStatus.Seen
+              ? 'Aún no se han obtenido datos sobre este Pokémon.'
+              : description}
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>

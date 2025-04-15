@@ -6,7 +6,7 @@ import { ITEMS_DB } from './itemData'; // Alias
 export const LOCATION_UPDATE_INTERVAL_MS = 5000;
 export const LOCATION_UPDATE_DISTANCE_METERS = 10;
 export const ENCOUNTER_CHECK_DISTANCE_METERS = 50;
-export const ENCOUNTER_PROBABILITY = 0.25;
+export const ENCOUNTER_PROBABILITY = 0.3;
 export const SHINY_PROBABILITY = 1 / 4096;
 
 // --- Items ---
