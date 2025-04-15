@@ -1,12 +1,7 @@
 // src/components/map/MapViewComponent.tsx
 import React, { useRef, useEffect } from 'react';
 import { StyleSheet, View, Image, Platform, Text } from 'react-native'; // Añadir Text
-import MapView, {
-  Marker,
-  Polyline,
-  PROVIDER_GOOGLE,
-  Region,
-} from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useWalk } from '@/src/contexts/WalkContext';
 import { Coordinate, PokemonEncounter } from '@/src/types';
 
@@ -90,7 +85,7 @@ export const MapViewComponent: React.FC<Props> = ({ onEncounterPress }) => {
           let markerOpacity = 1.0;
           if (pokemonEncounter.caught) {
             borderColor = '#4CAF50';
-            markerOpacity = 1;
+            markerOpacity = 1.0;
           }
           return (
             <Marker
@@ -140,7 +135,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, .9)',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -151,7 +146,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   markerSprite: {
-    width: 30,
-    height: 30,
+    width: 50,
+    height: 50,
   },
 });

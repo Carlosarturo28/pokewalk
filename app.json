@@ -12,7 +12,8 @@
       "assets/images/*",
       "assets/images/profile/*",
       "assets/*.gif",
-      "assets/*.png"
+      "assets/*.png",
+      "assets/*.jpg"
     ],
     "ios": {
       "supportsTablet": true
@@ -25,15 +26,21 @@
       },
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#fff"
       },
       "package": "com.carlosnavarro.pokewalk",
 
       "permissions": [
-        "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_BACKGROUND_LOCATION"
-      ]
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
+      ],
+      "foregroundService": {
+        "location": {
+          "description": "Permite rastrear tu caminata y encontrar Pokémon incluso cuando la app está en segundo plano."
+        }
+      }
     },
     "web": {
       "bundler": "metro",
@@ -46,9 +53,9 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "image": "./assets/images/splash-screen.png",
+          "resizeMode": "cover",
+          "backgroundColor": "#F9CAC1"
         }
       ],
       "expo-location"

@@ -61,7 +61,7 @@ export const ITEMS_DB: { [key: string]: Item } = {
     /* ... */ id: 'golden-razz-berry',
     name: 'Golden Razz Berry',
     category: 'berry',
-    sprite: `${ITEM_SPRITE_URL_BASE}golden-razz-berry.png`,
+    sprite: `https://archives.bulbagarden.net/media/upload/7/7e/Bag_Golden_Razz_Berry_Sprite.png`,
     findDifficulty: 15,
     description: 'Aumenta drásticamente la facilidad de captura.',
     effect: { catchRateModifier: 2.5 },
@@ -116,10 +116,10 @@ export const FINDABLE_ITEM_IDS: string[] = [
   'greatball',
   'ultraball',
   'razz-berry',
-  'nanab-berry',
+  //'nanab-berry',
   'golden-razz-berry',
-  'potion',
-  'revive',
+  // 'potion',
+  //'revive',
   'lucky-egg', // <-- Añadido a la lista de encontrables
 ];
 

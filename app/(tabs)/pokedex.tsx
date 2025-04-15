@@ -129,6 +129,7 @@ export default function PokedexScreenWithSearch() {
           {/* Botones de Filtro por Estado */}
           <View style={styles.filterButtonsContainer}>
             <TouchableOpacity
+              activeOpacity={0.7}
               style={[
                 styles.filterButton,
                 statusFilter === 'all' && styles.filterButtonActive,
@@ -146,6 +147,7 @@ export default function PokedexScreenWithSearch() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
+              activeOpacity={0.7}
               style={[
                 styles.filterButton,
                 statusFilter === PokedexStatus.Seen &&
@@ -164,6 +166,7 @@ export default function PokedexScreenWithSearch() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
+              activeOpacity={0.7}
               style={[
                 styles.filterButton,
                 statusFilter === PokedexStatus.Caught &&

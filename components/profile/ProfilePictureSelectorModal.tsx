@@ -1,7 +1,6 @@
-// src/components/profile/ProfilePictureSelectorModal.tsx (NUEVO ARCHIVO)
-import React from 'react';
+import React, { useEffect } from 'react'; // Añadido useEffect
 import {
-  Modal,
+  // Quitado Modal
   View,
   Text,
   StyleSheet,
@@ -9,12 +8,17 @@ import {
   Image,
   TouchableOpacity,
   Dimensions,
+  BackHandler, // Añadido BackHandler
+  TouchableWithoutFeedback, // Añadido para el overlay
 } from 'react-native';
-// Usar alias
+// Importa Portal de Gorhom
+import { Portal } from '@gorhom/portal';
+// Usar alias (Asegúrate que la ruta sea correcta)
 import {
   PROFILE_PICTURES,
   ProfilePictureOption,
-} from '@/src/utils/profilePictures';
+} from '@/src/utils/profilePictures'; // Ajusta la ruta si es necesario
+import { MODAL_PORTAL_HOST } from '@/app/_layout';
 
 interface Props {
   isVisible: boolean;
@@ -25,13 +29,34 @@ interface Props {
 const { width } = Dimensions.get('window');
 const NUM_COLUMNS = 3;
 const itemMargin = 10;
-const itemSize = (width * 0.85 - itemMargin * (NUM_COLUMNS + 1)) / NUM_COLUMNS; // 85% del ancho, 3 columnas
+const itemSize = (width * 0.85 - itemMargin * (NUM_COLUMNS + 1)) / NUM_COLUMNS;
 
 export const ProfilePictureSelectorModal: React.FC<Props> = ({
   isVisible,
   onClose,
   onSelectPicture,
 }) => {
+  // Manejo del botón Atrás en Android
+  useEffect(() => {
+    const backAction = () => {
+      if (isVisible) {
+        onClose();
+        return true; // Previene cierre de app
+      }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+    return () => backHandler.remove();
+  }, [isVisible, onClose]);
+
+  // No renderizar nada si no está visible
+  if (!isVisible) {
+    return null;
+  }
+
   const renderItem = ({ item }: { item: ProfilePictureOption }) => (
     <TouchableOpacity
       style={styles.pictureItem}
@@ -46,50 +71,48 @@ export const ProfilePictureSelectorModal: React.FC<Props> = ({
   );
 
   return (
-    <Modal
-      animationType='fade' // O 'slide'
-      transparent={true}
-      visible={isVisible}
-      onRequestClose={onClose}
-    >
-      <TouchableOpacity // Touchable para cerrar al tocar fuera del modal
-        style={styles.modalOverlay}
-        activeOpacity={1}
-        onPressOut={onClose} // Cierra al soltar fuera del contenido
-      >
-        <View
-          style={styles.modalContent}
-          onStartShouldSetResponder={() => true}
-        >
-          {/* Evita que el toque en el contenido cierre el modal */}
-          <Text style={styles.modalTitle}>Elige tu foto de perfil</Text>
-          <FlatList
-            data={PROFILE_PICTURES}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id}
-            numColumns={NUM_COLUMNS}
-            contentContainerStyle={styles.listContainer}
-            showsVerticalScrollIndicator={false}
-          />
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-            <Text style={styles.closeButtonText}>Cerrar</Text>
-          </TouchableOpacity>
+    // Usa Portal de Gorhom
+    <Portal hostName={MODAL_PORTAL_HOST}>
+      {/* Fondo semi-transparente que cubre todo y cierra al tocar */}
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={styles.modalOverlay}>
+          {/* Contenedor del contenido visible (usa TouchableWithoutFeedback para evitar que el toque se propague y cierre) */}
+          <TouchableWithoutFeedback>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>Elige tu foto de perfil</Text>
+              <FlatList
+                data={PROFILE_PICTURES}
+                renderItem={renderItem}
+                keyExtractor={(item) => item.id}
+                numColumns={NUM_COLUMNS}
+                contentContainerStyle={styles.listContainer}
+                showsVerticalScrollIndicator={false}
+              />
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Text style={styles.closeButtonText}>Cerrar</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </TouchableOpacity>
-    </Modal>
+      </TouchableWithoutFeedback>
+    </Portal>
   );
 };
 
+// Estilos ajustados para el modal falso
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
+    // Ocupa toda la pantalla absolutamente
+    ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    // zIndex alto para asegurar que esté encima (opcional con Portal)
+    zIndex: 100,
   },
   modalContent: {
-    width: '90%', // Ancho del modal
-    maxHeight: '70%', // Altura máxima
+    width: '90%',
+    maxHeight: '70%',
     backgroundColor: 'white',
     borderRadius: 15,
     paddingVertical: 20,
@@ -106,30 +129,22 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   listContainer: {
-    // paddingHorizontal: itemMargin / 2,
-    alignItems: 'center', // Centra los items si no llenan el ancho
+    alignItems: 'center',
   },
   pictureItem: {
     width: itemSize,
-    height: itemSize, // Cuadrado
+    height: itemSize,
     margin: itemMargin / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden', // Asegura que la imagen no se salga
-    // backgroundColor: '#eee', // Fondo si la imagen no carga
-    borderRadius: itemSize / 2, // Hacerlos circulares
+    overflow: 'hidden',
+    borderRadius: itemSize / 2,
     borderWidth: 1,
     borderColor: '#ccc',
   },
   pictureImage: {
     width: '100%',
     height: '100%',
-  },
-  pictureName: {
-    // Estilo si decides mostrar el nombre
-    marginTop: 5,
-    fontSize: 12,
-    textAlign: 'center',
   },
   closeButton: {
     marginTop: 20,

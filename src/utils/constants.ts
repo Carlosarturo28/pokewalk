@@ -10,7 +10,7 @@ export const ENCOUNTER_PROBABILITY = 0.3;
 export const SHINY_PROBABILITY = 1 / 4096;
 
 // --- Items ---
-export const ITEM_FIND_PROBABILITY_BASE = 0.15;
+export const ITEM_FIND_PROBABILITY_BASE = 0.2;
 export const SHINY_CHARM_MULTIPLIER = 3;
 export const LUCKY_EGG_XP_MULTIPLIER = 2;
 

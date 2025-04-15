@@ -1,46 +1,39 @@
-// src/components/common/CaptureModal.tsx
 import React, { useState, useEffect } from 'react';
 import {
-  Modal,
   View,
   Text,
   Image,
   StyleSheet,
   Button,
   ActivityIndicator,
-  ImageSourcePropType,
+  BackHandler, // Añadido BackHandler
+  ScrollView, // Para evitar cierre al tocar contenido
 } from 'react-native';
-// Importa el hook del nuevo contexto de notificación
-import { useNotification } from '@/src/contexts/NotificationContext';
-
-// --- Alias y Tipos ---
-import { PokemonEncounter, PokedexStatus, Item } from '@/src/types';
+// Importa Portal de Gorhom
+import { Portal } from '@gorhom/portal';
+import { useNotification } from '@/src/contexts/NotificationContext'; // Ajusta ruta
+import { PokemonEncounter, PokedexStatus, Item } from '@/src/types'; // Ajusta ruta
 import {
   POKEBALLS,
   BERRY_DATA,
   LUCKY_EGG_XP_MULTIPLIER,
-} from '@/src/utils/constants';
-import { calculateCatchChance } from '@/src/utils/helpers';
+} from '@/src/utils/constants'; // Ajusta ruta
+import { calculateCatchChance } from '@/src/utils/helpers'; // Ajusta ruta
+import { usePokedex } from '@/src/contexts/PokedexContext'; // Ajusta ruta
+import { useWalk } from '@/src/contexts/WalkContext'; // Ajusta ruta
+import { useBackpack } from '@/src/contexts/BackpackContext'; // Ajusta ruta
+import { usePlayer } from '@/src/contexts/PlayerContext'; // Ajusta ruta
+import { MODAL_PORTAL_HOST } from '@/app/_layout';
 
-// --- Contextos ---
-import { usePokedex } from '@/src/contexts/PokedexContext';
-import { useWalk } from '@/src/contexts/WalkContext';
-import { useBackpack } from '@/src/contexts/BackpackContext';
-import { usePlayer } from '@/src/contexts/PlayerContext';
-
-// --- Assets ---
-const placeholderSprite = require('../../assets/images/pokeball-placeholder.png'); // Alias
-const shinyIcon = require('../../assets/images/is-shiny.png'); // Alias
-
-// --- Imágenes para Toasts (Ajusta las rutas si es necesario) ---
-const imgGotcha = require('../../assets/images/toast/gotcha.png');
-const imgEscaped = require('../../assets/images/toast/escaped.png');
-const imgOOBerry = require('../../assets/images/toast/outOfBerries.png');
-const imgBerry = require('../../assets/images/toast/berries.png');
-// const imgItemInfo = require('../../assets/images/toast/item_info.png'); // Descomenta si lo usas
-const imgErrorGeneric = require('../../assets/images/toast/error.png');
-const imgLuckyEgg = require('../../assets/images/toast/lucky_egg.png');
-const imgPokeball = require('../../assets/images/toast/oopokeboalls.png'); // O una imagen de bolsa vacía
+const placeholderSprite = require('../../assets/images/pokeball-placeholder.png'); // Ajusta ruta
+const shinyIcon = require('../../assets/images/is-shiny.png'); // Ajusta ruta
+const imgGotcha = require('../../assets/images/toast/gotcha.png'); // Ajusta ruta
+const imgEscaped = require('../../assets/images/toast/escaped.png'); // Ajusta ruta
+const imgOOBerry = require('../../assets/images/toast/outOfBerries.png'); // Ajusta ruta
+const imgBerry = require('../../assets/images/toast/berries.png'); // Ajusta ruta
+const imgErrorGeneric = require('../../assets/images/toast/error.png'); // Ajusta ruta
+const imgLuckyEgg = require('../../assets/images/toast/lucky_egg.png'); // Ajusta ruta
+const imgPokeball = require('../../assets/images/toast/oopokeboalls.png'); // Ajusta ruta
 
 interface Props {
   visible: boolean;
@@ -62,16 +55,37 @@ export const CaptureModal: React.FC<Props> = ({
   const { recordPokemonCatch } = usePlayer();
   const { showNotification } = useNotification();
 
+  // Resetea estado interno al ocultar/cambiar encounter
   useEffect(() => {
-    if (!visible) setActiveBerry(null);
+    if (!visible) {
+      setActiveBerry(null);
+      setIsAttemptingCapture(false); // Asegura resetear estado de intento
+    }
   }, [visible]);
   useEffect(() => {
     setActiveBerry(null);
   }, [encounter?.id]);
 
-  if (!encounter) return null;
+  // Manejo del botón Atrás en Android
+  useEffect(() => {
+    const backAction = () => {
+      if (visible && !isAttemptingCapture) {
+        // Solo cerrar si no está en proceso de captura
+        onClose();
+        return true;
+      }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+    return () => backHandler.remove();
+  }, [visible, onClose, isAttemptingCapture]); // Depende de isAttemptingCapture
 
+  // Lógica de captura y uso de bayas (sin cambios internos)
   const handleAttemptCapture = (pokeballId: keyof typeof POKEBALLS) => {
+    // ... (código de handleAttemptCapture igual que antes) ...
     const currentBallCount = backpack.get(pokeballId) ?? 0;
     if (currentBallCount <= 0) {
       showNotification({
@@ -82,9 +96,8 @@ export const CaptureModal: React.FC<Props> = ({
       });
       return;
     }
-
     setIsAttemptingCapture(true);
-    const pokemon = encounter.pokemonDetails;
+    const pokemon = encounter!.pokemonDetails; // Usar '!' porque ya validamos encounter
     const berryModifier = activeBerry?.effect?.catchRateModifier ?? 1.0;
     const catchChance = calculateCatchChance(
       pokemon.capture_rate,
@@ -92,7 +105,6 @@ export const CaptureModal: React.FC<Props> = ({
       berryModifier
     );
     const success = Math.random() < catchChance;
-
     console.log(
       `Capture attempt: ${
         pokemon.name
@@ -102,26 +114,21 @@ export const CaptureModal: React.FC<Props> = ({
     );
     useItem(pokeballId, 1);
     setActiveBerry(null);
-
     setTimeout(() => {
       if (success) {
-        // --- Captura Exitosa ---
         const wasAlreadyCaught =
           getPokemonStatus(pokemon.id) === PokedexStatus.Caught;
         const isNewEntry = !wasAlreadyCaught;
-        const isShiny = encounter.isShiny;
-
-        // 1. Muestra la notificación de captura INMEDIATAMENTE
+        const isShiny = encounter!.isShiny;
         showNotification({
           type: 'success',
-          title: isShiny ? '✨ ¡Increíble!' : '¡Gotcha!',
+          title: isShiny ? '✨ ¡Increíble!' : 'Gotcha!',
           message:
-            `${pokemon.name} fue atrapado!` +
-            (isShiny ? ' ¡Es un Variocolor!' : ''),
+            `¡${
+              pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)
+            } fue atrapado!` + (isShiny ? ' ¡Es un shiny!' : ''),
           imageSource: imgGotcha,
         });
-
-        // 2. Realiza las actualizaciones de estado
         updatePokedexEntry(
           pokemon.id,
           PokedexStatus.Caught,
@@ -129,24 +136,19 @@ export const CaptureModal: React.FC<Props> = ({
           isShiny,
           pokeballId
         );
-        markEncounterAsCaught(encounter.id);
-
-        // 3. Prepara la lógica del Huevo Suerte
+        markEncounterAsCaught(encounter!.id);
         let xpMultiplier = 1.0;
-        let luckyEggWasUsed = false; // Flag para saber si mostrar la segunda notificación
+        let luckyEggWasUsed = false;
         if (hasItem('lucky-egg')) {
           if (useItem('lucky-egg', 1)) {
             xpMultiplier = LUCKY_EGG_XP_MULTIPLIER;
-            luckyEggWasUsed = true; // Marca que se usó
+            luckyEggWasUsed = true;
             console.log('Lucky Egg consumed! XP x', xpMultiplier);
           }
         }
-        // Registra la captura (esto puede calcular el XP internamente)
         recordPokemonCatch(isShiny, isNewEntry, xpMultiplier);
-
-        // 4. Si se usó el Huevo Suerte, muestra su notificación DESPUÉS de un retraso
         if (luckyEggWasUsed) {
-          const luckyEggDelay = 2000; // Retraso en ms (ej. 2 segundos)
+          const luckyEggDelay = 2000;
           setTimeout(() => {
             showNotification({
               type: 'info',
@@ -156,27 +158,23 @@ export const CaptureModal: React.FC<Props> = ({
             });
           }, luckyEggDelay);
         }
-
-        // 5. Cierra el modal (esto puede ocurrir antes de que aparezca la segunda notificación)
         setIsAttemptingCapture(false);
         onClose();
       } else {
-        // --- Captura Fallida ---
         showNotification({
           type: 'error',
           title: '¡Oh, no!',
           message: `¡El ${pokemon.name} salvaje se ha escapado!`,
           imageSource: imgEscaped,
         });
-        removeEncounterFromSummary(encounter.id);
+        removeEncounterFromSummary(encounter!.id);
         setIsAttemptingCapture(false);
         onClose();
       }
-    }, 1200); // Delay simulado inicial
+    }, 1200);
   };
-
-  // --- Lógica de Uso de Bayas (sin cambios) ---
   const handleUseBerry = (berryId: string) => {
+    // ... (código de handleUseBerry igual que antes) ...
     const berry = BERRY_DATA[berryId];
     if (!berry) return;
     const currentBerryCount = backpack.get(berryId) ?? 0;
@@ -189,7 +187,6 @@ export const CaptureModal: React.FC<Props> = ({
       });
       return;
     }
-
     if (useItem(berryId, 1)) {
       setActiveBerry(berry);
       showNotification({
@@ -197,7 +194,9 @@ export const CaptureModal: React.FC<Props> = ({
         title: `¡Usaste ${berry.name}!`,
         message:
           berry.description ??
-          `Puede que ${encounter.pokemonDetails.name} sea más fácil de atrapar.`,
+          `Puede que ${
+            encounter!.pokemonDetails.name
+          } sea más fácil de atrapar.`,
         imageSource: imgBerry,
       });
     } else {
@@ -210,23 +209,20 @@ export const CaptureModal: React.FC<Props> = ({
     }
   };
 
+  // No renderizar si no es visible o no hay encounter
+  if (!visible || !encounter) {
+    return null;
+  }
+
   const spriteUri = encounter.isShiny
     ? encounter.pokemonDetails.sprites.front_shiny
     : encounter.pokemonDetails.sprites.front_default;
 
-  // --- Renderizado del Modal (JSX sin cambios) ---
   return (
-    <Modal
-      animationType='slide'
-      transparent={true}
-      visible={visible}
-      onRequestClose={() => {
-        if (!isAttemptingCapture) onClose();
-      }}
-    >
-      <View style={styles.modalCenteredView}>
+    // Usa Portal de Gorhom
+    <Portal hostName={MODAL_PORTAL_HOST}>
+      <View style={styles.modalBackdrop}>
         <View style={styles.modalView}>
-          {/* ... (El JSX del título, imagen, botones, etc. sigue igual) ... */}
           <View style={styles.titleContainer}>
             <Text style={styles.modalTitle}>
               ¡Un {encounter.pokemonDetails.name} salvaje!
@@ -246,7 +242,8 @@ export const CaptureModal: React.FC<Props> = ({
           />
           {activeBerry && (
             <Text style={styles.berryActiveText}>
-              ¡{activeBerry.name} activa!
+              {' '}
+              ¡{activeBerry.name} activa!{' '}
             </Text>
           )}
           {isAttemptingCapture ? (
@@ -255,71 +252,75 @@ export const CaptureModal: React.FC<Props> = ({
               <Text>Lanzando Poké Ball...</Text>
             </View>
           ) : (
-            <View style={styles.captureOptions}>
-              {/* Sección de Bayas */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.optionsTitle}>Usar Baya:</Text>
-                {Object.keys(BERRY_DATA).map((berryId) => {
-                  const berry = BERRY_DATA[berryId];
-                  const count = backpack.get(berryId) ?? 0;
-                  const isDisabled = count <= 0 || !!activeBerry;
-                  return (
-                    <View key={berryId} style={styles.buttonWrapper}>
-                      <Button
-                        title={`Usar ${berry.name} (${count})`}
-                        onPress={() => handleUseBerry(berryId)}
-                        disabled={isDisabled}
-                        color={
-                          activeBerry?.id === berryId
-                            ? 'green'
-                            : isDisabled && !activeBerry
-                            ? 'grey'
-                            : '#FF7F00'
-                        }
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-              {/* Sección de Poké Balls */}
-              <View style={styles.sectionContainer}>
-                <Text style={styles.optionsTitle}>Lanzar Poké Ball:</Text>
-                {Object.entries(POKEBALLS).map(([key, ball]) => {
-                  const pokeballId = key as keyof typeof POKEBALLS;
-                  const count = backpack.get(pokeballId) ?? 0;
-                  const isDisabled = count <= 0;
-                  return (
-                    <View key={pokeballId} style={styles.buttonWrapper}>
-                      <Button
-                        title={`Usar ${ball.name} (${count})`}
-                        onPress={() => handleAttemptCapture(pokeballId)}
-                        disabled={isDisabled}
-                      />
-                    </View>
-                  );
-                })}
-              </View>
-              {/* Botón de Huir */}
-              <View style={[styles.buttonWrapper, { marginTop: 15 }]}>
+            <>
+              <ScrollView style={styles.captureOptions}>
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.optionsTitle}>Usar Baya:</Text>
+                  {Object.keys(BERRY_DATA).map((berryId) => {
+                    const berry = BERRY_DATA[berryId];
+                    const count = backpack.get(berryId) ?? 0;
+                    const isDisabled = count <= 0 || !!activeBerry;
+                    return (
+                      <View key={berryId} style={styles.buttonWrapper}>
+                        <Button
+                          title={`Usar ${berry.name} (${count})`}
+                          onPress={() => handleUseBerry(berryId)}
+                          disabled={isDisabled}
+                          color={
+                            activeBerry?.id === berryId
+                              ? 'green'
+                              : isDisabled && !activeBerry
+                              ? 'grey'
+                              : '#FF7F00'
+                          }
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+                <View style={styles.sectionContainer}>
+                  <Text style={styles.optionsTitle}>Lanzar Poké Ball:</Text>
+                  {Object.entries(POKEBALLS).map(([key, ball]) => {
+                    const pokeballId = key as keyof typeof POKEBALLS;
+                    const count = backpack.get(pokeballId) ?? 0;
+                    const isDisabled = count <= 0;
+                    return (
+                      <View key={pokeballId} style={styles.buttonWrapper}>
+                        <Button
+                          title={`Usar ${ball.name} (${count})`}
+                          onPress={() => handleAttemptCapture(pokeballId)}
+                          disabled={isDisabled}
+                        />
+                      </View>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+              <View
+                style={[styles.buttonWrapper, { marginTop: 15, width: '100%' }]}
+              >
                 <Button title='Huir' onPress={onClose} color='grey' />
               </View>
-            </View>
+            </>
           )}
         </View>
       </View>
-    </Modal>
+    </Portal>
   );
 };
 
-// --- Estilos (Sin cambios) ---
+// Estilos ajustados para el modal falso
 const styles = StyleSheet.create({
-  modalCenteredView: {
-    flex: 1,
+  modalBackdrop: {
+    // Renombrado de modalCenteredView
+    ...StyleSheet.absoluteFillObject, // Cubre toda la pantalla
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.6)',
+    zIndex: 3, // Asegura estar encima
   },
   modalView: {
+    // Contenedor visible
     margin: 20,
     backgroundColor: 'white',
     borderRadius: 15,
@@ -331,6 +332,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
     width: '85%',
+    maxHeight: '90%', // Ajusta si es necesario
   },
   titleContainer: {
     flexDirection: 'row',
@@ -346,12 +348,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   titleShinyIcon: { width: 22, height: 22 },
-  modalSprite: { width: 180, height: 180, marginBottom: 15 },
+  modalSprite: { width: 180, height: 180 },
   berryActiveText: {
     fontSize: 16,
     color: 'green',
     fontWeight: 'bold',
-    marginBottom: 15,
+    marginBottom: 8,
     fontStyle: 'italic',
   },
   captureOptions: { marginTop: 15, width: '100%' },

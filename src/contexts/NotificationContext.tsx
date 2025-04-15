@@ -8,22 +8,17 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  Platform,
-  ImageSourcePropType,
-  Modal, // <-- Importar Modal de nuevo
-  TouchableWithoutFeedback, // <-- Necesario para cerrar al tocar fuera (opcional)
-} from 'react-native';
+import { View, Text, Image, StyleSheet, Platform } from 'react-native';
 import * as Animatable from 'react-native-animatable';
+// Importa Portal de @gorhom/portal
+import { Portal } from '@gorhom/portal';
 import {
   NotificationConfig,
   NotificationState,
   NotificationType,
-} from '../types/Notification';
+} from '../types/Notification'; // <-- VERIFICA ESTA RUTA
+import { NOTIFICATION_PORTAL_HOST } from '@/app/_layout';
+// Importa el nombre del host definido en App.tsx
 
 // --- Interfaz del Contexto ---
 interface NotificationContextProps {
@@ -34,7 +29,7 @@ const NotificationContext = createContext<NotificationContextProps | undefined>(
   undefined
 );
 
-const DEFAULT_DURATION = 3500;
+const DEFAULT_DURATION = 3500; // Duración predeterminada en milisegundos
 
 // --- Provider ---
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
@@ -44,7 +39,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     useState<NotificationState | null>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Oculta la notificación (cambia isVisible)
+  // Lógica para ocultar (marca como no visible)
   const hideNotification = useCallback(() => {
     setCurrentNotification((prev) =>
       prev ? { ...prev, isVisible: false } : null
@@ -54,28 +49,37 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
   // Muestra una nueva notificación
   const showNotification = useCallback(
     (config: Omit<NotificationConfig, 'id'>) => {
+      // Limpia timeout anterior si existía
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
 
-      const newNotification: NotificationState = {
-        ...config,
-        id: `notif-${Date.now()}-${Math.random()}`,
-        isVisible: true, // Marcar como visible para que NotificationDisplay reaccione
-      };
+      // Oculta la notificación actual si está visible (transición rápida)
+      setCurrentNotification((prev) =>
+        prev && prev.isVisible ? { ...prev, isVisible: false } : null
+      );
 
-      setCurrentNotification(newNotification);
+      // Pequeño delay para mostrar la nueva
+      setTimeout(() => {
+        const newNotification: NotificationState = {
+          ...config,
+          id: `notif-${Date.now()}-${Math.random()}`, // ID único
+          isVisible: true, // Marcar como visible para mostrar
+        };
+        setCurrentNotification(newNotification);
 
-      // Programa el ocultamiento automático
-      const duration = config.duration ?? DEFAULT_DURATION;
-      timeoutRef.current = setTimeout(() => {
-        hideNotification();
-      }, duration);
+        // Programa el ocultamiento automático
+        const duration = config.duration ?? DEFAULT_DURATION;
+        timeoutRef.current = setTimeout(() => {
+          hideNotification();
+        }, duration);
+      }, 50); // Delay corto (ajustar si es necesario)
     },
     [hideNotification]
   );
 
-  // Limpia timeout al desmontar
+  // Limpia timeout al desmontar el provider
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -84,18 +88,31 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({
     };
   }, []);
 
+  // Valor que provee el contexto
   const value = { showNotification };
 
   return (
     <NotificationContext.Provider value={value}>
       {children}
-      {/* Renderiza el componente de display aquí */}
-      <NotificationDisplay notification={currentNotification} />
+      {/* Renderiza el componente de display DENTRO de un Portal de Gorhom */}
+      {/* Solo renderiza el Portal si hay una notificación en el estado */}
+      {currentNotification && (
+        <Portal hostName={NOTIFICATION_PORTAL_HOST}>
+          <NotificationDisplay
+            key={currentNotification.id} // Key para asegurar re-render y animación
+            notification={currentNotification}
+            onHideComplete={() => {
+              // Opcional: Podrías limpiar la notificación aquí si fuera necesario
+              // setCurrentNotification(null);
+            }}
+          />
+        </Portal>
+      )}
     </NotificationContext.Provider>
   );
 };
 
-// --- Hook ---
+// --- Hook para usar el contexto ---
 export const useNotification = (): NotificationContextProps => {
   const context = useContext(NotificationContext);
   if (!context) {
@@ -106,167 +123,148 @@ export const useNotification = (): NotificationContextProps => {
   return context;
 };
 
-// --- Componente NotificationDisplay (AHORA CON MODAL) ---
+// --- Componente Interno para Mostrar la Notificación ---
 
-const notificationStyles = {
+// Estilos predefinidos por tipo de notificación
+const notificationStyles: Record<
+  NotificationType,
+  { backgroundColor: string; borderColor: string }
+> = {
   success: { backgroundColor: '#DCEDC8', borderColor: '#7CB342' },
   error: { backgroundColor: '#FFCDD2', borderColor: '#E57373' },
   info: { backgroundColor: '#BBDEFB', borderColor: '#64B5F6' },
   warning: { backgroundColor: '#FFF9C4', borderColor: '#FFD54F' },
 };
 
-const NotificationDisplay: React.FC<{
-  notification: NotificationState | null;
-}> = ({ notification }) => {
-  const [internalVisible, setInternalVisible] = useState(false);
-  const viewRef = useRef<Animatable.View & View>(null);
+// Props para el componente de display
+interface NotificationDisplayProps {
+  notification: NotificationState;
+  onHideComplete?: () => void;
+}
+
+// Componente que renderiza la UI de la notificación
+const NotificationDisplay: React.FC<NotificationDisplayProps> = ({
+  notification,
+  onHideComplete,
+}) => {
+  // Estado interno para controlar la visibilidad y animación de salida
+  const [isVisibleInternal, setIsVisibleInternal] = useState(true);
+  const viewRef = useRef<Animatable.View & View>(null); // Ref para la vista animable
 
   useEffect(() => {
-    // Si la notificación del contexto debe ser visible...
-    if (notification?.isVisible) {
-      // Si no está visible internamente, hazla visible (esto abre el Modal)
-      if (!internalVisible) {
-        setInternalVisible(true);
-      }
-    }
-    // Si la notificación del contexto NO debe ser visible, pero internamente SÍ lo está...
-    else if (internalVisible && viewRef.current) {
-      // Ejecuta animación de salida ANTES de cerrar el Modal
+    // Si la notificación del contexto ya no debe ser visible,
+    // pero nuestro estado interno aún dice que sí, iniciamos la animación de salida.
+    if (!notification.isVisible && isVisibleInternal && viewRef.current) {
       viewRef.current
-        .animate('fadeOutDown', 300) // Animación más rápida
-        .then(() => setInternalVisible(false)); // Cierra el Modal después
+        .animate('fadeOutDown', 300) // Animación de salida
+        .then(() => {
+          setIsVisibleInternal(false); // Actualiza estado interno al terminar
+          onHideComplete?.(); // Llama al callback opcional
+        });
     }
-    // Asegurar que esté cerrado si no hay notificación
-    else if (!notification && internalVisible) {
-      setInternalVisible(false);
+    // Asegura que esté visible internamente si la notificación del contexto lo está
+    else if (notification.isVisible && !isVisibleInternal) {
+      setIsVisibleInternal(true);
     }
-  }, [notification, internalVisible]); // Reacciona a cambios en la notificación del contexto
+  }, [notification.isVisible, isVisibleInternal, onHideComplete]); // Dependencias
 
-  // La visibilidad del MODAL ahora depende de internalVisible
-  if (!notification && !internalVisible) {
-    // No renderizar si no hay notif y ya se ocultó
+  // Si ya no es visible internamente (después de la animación), no renderizar nada
+  if (!isVisibleInternal) {
     return null;
   }
 
-  // Solo necesitamos los datos de la notificación si vamos a renderizar el modal
-  const currentNotifData = notification ?? ({} as Partial<NotificationState>); // Usa datos actuales o vacío
+  // Determina estilos y animación de entrada
   const stylesForType =
-    notificationStyles[currentNotifData.type ?? 'info'] ||
-    notificationStyles.info;
-  const entryAnimation = 'fadeInUp';
+    notificationStyles[notification.type] || notificationStyles.info;
+  const entryAnimation = 'fadeInUp'; // Animación de entrada
 
   return (
-    // --- USA EL MODAL DE REACT NATIVE ---
-    <Modal
-      transparent={true}
-      visible={internalVisible} // Controlado por estado interno
-      animationType='none' // Deshabilita animación nativa del modal
-      onRequestClose={() => {
-        // Podríamos forzar el cierre aquí si el usuario presiona atrás en Android
-        // setCurrentNotification(prev => prev ? { ...prev, isVisible: false } : null);
-        // setInternalVisible(false);
-      }}
-    >
-      {/* Contenedor que permite centrar y no bloquea toques fuera de la notificación en sí */}
-      <View style={styles.modalOuterContainer} pointerEvents='box-none'>
-        {/* Contenedor interno para posicionar (abajo en este caso) */}
-        <View style={styles.modalPositioner} pointerEvents='box-none'>
-          {/* Vista Animable con el contenido */}
-          <Animatable.View
-            ref={viewRef}
-            // Solo ejecuta animación de entrada si acabamos de volvernos visibles
-            animation={
-              internalVisible && notification?.isVisible
-                ? entryAnimation
-                : undefined
-            }
-            duration={500}
-            style={[styles.notificationContainer, stylesForType]}
-            pointerEvents='auto' // La notificación SÍ es interactuable
-          >
-            {/* Imagen */}
-            {currentNotifData.imageSource && (
-              <View style={styles.imageContainer}>
-                <Image
-                  source={currentNotifData.imageSource}
-                  style={styles.image}
-                  resizeMode='contain'
-                />
-              </View>
-            )}
-            {/* Textos */}
-            <View style={styles.textContainer}>
-              <Text style={styles.title}>{currentNotifData.title ?? ''}</Text>
-              {currentNotifData.message && (
-                <Text style={styles.message}>{currentNotifData.message}</Text>
-              )}
-            </View>
-          </Animatable.View>
+    // Contenedor externo para posicionamiento absoluto
+    <View style={styles.outerContainer} pointerEvents='box-none'>
+      {/* Vista Animable que contiene la notificación */}
+      <Animatable.View
+        ref={viewRef}
+        animation={entryAnimation} // Aplica animación de entrada
+        duration={500}
+        style={[styles.notificationContainer, stylesForType]}
+        pointerEvents='auto' // Permite interacción con la notificación
+      >
+        {/* Icono/Imagen (si existe) */}
+        {notification.imageSource && (
+          <View style={styles.imageContainer}>
+            <Image
+              source={notification.imageSource}
+              style={styles.image}
+              resizeMode='contain'
+            />
+          </View>
+        )}
+        {/* Contenedor de Texto */}
+        <View style={styles.textContainer}>
+          <Text style={styles.title}>{notification.title ?? ''}</Text>
+          {notification.message && (
+            <Text style={styles.message}>{notification.message}</Text>
+          )}
         </View>
-      </View>
-    </Modal>
+      </Animatable.View>
+    </View>
   );
 };
 
 // --- Estilos para NotificationDisplay ---
 const styles = StyleSheet.create({
-  // Contenedor externo del Modal, ocupa todo y permite pasar toques
-  modalOuterContainer: {
-    flex: 1,
-    // backgroundColor: 'rgba(0, 0, 0, 0.1)', // Fondo opcional si quieres oscurecer un poco
-  },
-  // Contenedor interno para posicionar la notificación (abajo y centrada)
-  modalPositioner: {
-    flex: 1, // Ocupa espacio disponible
-    justifyContent: 'flex-end', // Alinea abajo
-    alignItems: 'center', // Centra horizontalmente
-    // Espaciado desde el borde inferior (considera altura de tab bar)
-    paddingBottom: Platform.select({
-      ios: 80,
+  outerContainer: {
+    position: 'absolute', // Posicionamiento absoluto para flotar
+    // Distancia desde abajo (considera TabBar, etc.)
+    bottom: Platform.select({
+      ios: 80, // Mayor espacio en iOS por defecto
       android: 60,
     }),
-    paddingHorizontal: 10, // Padding horizontal para que no pegue a los bordes
+    left: 10, // Margen izquierdo
+    right: 10, // Margen derecho
+    alignItems: 'center', // Centra la tarjeta horizontalmente
+    // zIndex y elevation son menos necesarios con Portal, pero pueden ayudar en casos complejos
+    zIndex: 4,
   },
-  // Estilos de la tarjeta de notificación visible
   notificationContainer: {
-    flexDirection: 'row',
-    width: '100%', // Ocupa el ancho disponible dentro del positioner (con padding)
-    maxWidth: 450,
-    padding: 15,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    backgroundColor: 'white', // Fondo blanco por defecto (sobrescrito por tipo)
-    // Sombra
+    flexDirection: 'row', // Layout horizontal (imagen | texto)
+    width: '100%', // Ocupa el ancho disponible (limitado por outerContainer y maxWidth)
+    maxWidth: 450, // Ancho máximo para pantallas grandes
+    padding: 15, // Padding interno
+    borderRadius: 12, // Bordes redondeados
+    borderWidth: 1.5, // Grosor del borde
+    backgroundColor: 'white', // Fondo base
+    // Sombra (iOS y Android)
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 7,
-    alignItems: 'center',
+    elevation: 7, // Sombra para Android
+    alignItems: 'center', // Centra verticalmente el contenido de la fila
   },
   imageContainer: {
-    width: 45,
-    height: 45,
+    width: 45, // Ancho fijo para el contenedor de imagen
+    height: 45, // Alto fijo
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 15, // Espacio entre imagen y texto
   },
   image: {
-    width: 40,
+    width: 40, // Tamaño de la imagen
     height: 40,
   },
   textContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    flex: 1, // Ocupa el espacio restante
+    justifyContent: 'center', // Centra el texto verticalmente
   },
   title: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#111',
+    color: '#111', // Color oscuro para el título
   },
   message: {
     fontSize: 14,
-    color: '#444',
-    marginTop: 3,
+    color: '#444', // Color grisáceo para el mensaje
+    marginTop: 3, // Pequeño espacio sobre el mensaje
   },
 });

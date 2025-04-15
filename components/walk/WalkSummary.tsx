@@ -94,8 +94,6 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: '#eee',
     textAlign: 'center',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
   },
   sectionHeader: {
     fontSize: 16,

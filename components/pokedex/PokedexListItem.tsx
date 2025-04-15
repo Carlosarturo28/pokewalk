@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 // Usar alias
-import { PokedexEntry, PokedexStatus } from '@/src/types';
+import { PokedexStatus } from '@/src/types';
 import { usePokedex } from '@/src/contexts/PokedexContext';
 import { getPokemonDetails } from '@/src/services/pokeapi';
 
@@ -157,6 +157,7 @@ export const PokedexListItem: React.FC<Props> = ({ pokemonId }) => {
 
   return (
     <TouchableOpacity
+      activeOpacity={0.7}
       onPress={handlePress}
       style={styles.touchable}
       disabled={isPlaceholder}
