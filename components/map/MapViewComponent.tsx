@@ -52,11 +52,6 @@ export const MapViewComponent: React.FC<Props> = ({ onEncounterPress }) => {
 
   const shouldUseCustomStyle = Platform.OS === 'android';
 
-  console.log(
-    walkSummary?.encounters.filter(
-      (enc): enc is PokemonEncounter => enc.type === 'pokemon'
-    )
-  );
   return (
     <MapView
       ref={mapRef}

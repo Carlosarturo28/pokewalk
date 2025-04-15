@@ -56,7 +56,7 @@ export const usePokedexManagement = () => {
       let loaded = false;
       try {
         const storedData = await AsyncStorage.getItem(POKEDEX_STORAGE_KEY);
-        console.log('=======================>', storedData);
+
         if (storedData) {
           const parsedData: [number, PokedexEntry][] = JSON.parse(storedData);
           if (Array.isArray(parsedData) && parsedData.length > 0) {
