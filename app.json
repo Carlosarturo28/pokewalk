@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "pokewalk",
+    "name": "Pokewalk",
     "slug": "pokewalk",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -53,9 +53,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-screen.png",
+          "image": "./assets/images/splash-icon.png",
           "resizeMode": "cover",
-          "backgroundColor": "#F9CAC1"
+          "backgroundColor": "#F9CAC1",
+          "imageWidth": 200
         }
       ],
       "expo-location"
