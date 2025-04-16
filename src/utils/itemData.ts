@@ -35,7 +35,7 @@ export const ITEMS_DB: { [key: string]: Item } = {
     name: 'Master Ball',
     category: 'pokeball',
     sprite: `${ITEM_SPRITE_URL_BASE}master-ball.png`,
-    findDifficulty: 1000,
+    findDifficulty: 500,
     description: 'La mejor Poké Ball. Captura cualquier Pokémon sin fallar.',
   },
 
@@ -73,7 +73,7 @@ export const ITEMS_DB: { [key: string]: Item } = {
     name: 'Shiny Charm',
     category: 'key',
     sprite: `${ITEM_SPRITE_URL_BASE}shiny-charm.png`,
-    findDifficulty: 500,
+    findDifficulty: 200,
     description: 'Aumenta la probabilidad de encontrar Pokémon Shiny.',
     effect: { shinyRateMultiplier: 3 },
   },

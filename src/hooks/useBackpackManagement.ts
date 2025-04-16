@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Usar alias
 import { ITEMS_DB } from '@/src/utils/itemData';
-import { Item } from '@/src/types';
 import { BACKPACK_STORAGE_KEY } from '@/src/utils/constants'; // Importar key
 
 export type BackpackState = Map<string, number>;
@@ -12,7 +11,7 @@ export type BackpackState = Map<string, number>;
 const getDefaultBackpackItems = (): BackpackState => {
   const initialBackpack = new Map<string, number>();
   initialBackpack.set('pokeball', 15);
-  initialBackpack.set('potion', 5);
+  // initialBackpack.set('potion', 5);
   initialBackpack.set('razz-berry', 3);
   return initialBackpack;
 };
