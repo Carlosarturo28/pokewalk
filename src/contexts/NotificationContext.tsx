@@ -243,15 +243,15 @@ const styles = StyleSheet.create({
     alignItems: 'center', // Centra verticalmente el contenido de la fila
   },
   imageContainer: {
-    width: 45, // Ancho fijo para el contenedor de imagen
-    height: 45, // Alto fijo
+    width: 60, // Ancho fijo para el contenedor de imagen
+    height: 60, // Alto fijo
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15, // Espacio entre imagen y texto
   },
   image: {
-    width: 40, // Tamaño de la imagen
-    height: 40,
+    width: 60, // Tamaño de la imagen
+    height: 60,
   },
   textContainer: {
     flex: 1, // Ocupa el espacio restante

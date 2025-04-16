@@ -49,7 +49,7 @@ export const WalkControls: React.FC = () => {
     }
   };
 
-  const buttonText = isWalking ? 'Terminar Caminata' : 'Iniciar Caminata';
+  const buttonText = isWalking ? 'Terminar aventura' : 'Iniciar aventura';
   const isDisabled = isProcessingWalk;
 
   return (
@@ -68,7 +68,7 @@ export const WalkControls: React.FC = () => {
           ]}
         />
         <Text style={styles.buttonText}>
-          {isProcessingWalk ? 'Procesando caminata...' : buttonText}
+          {isProcessingWalk ? 'Procesando aventura...' : buttonText}
         </Text>
       </TouchableOpacity>
     </View>

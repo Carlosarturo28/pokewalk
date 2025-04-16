@@ -1,79 +1,93 @@
 // src/components/walk/ItemEncounterItem.tsx
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
-import { ItemEncounter } from '@/src/types'; // Alias
+import { View, Text, Image, StyleSheet, ImageSourcePropType } from 'react-native';
+import { Item } from '@/src/types'; // Importa el tipo Item directamente - Ajusta ruta
 
 // Placeholder si el item no tiene sprite definido
-const placeholderItem = require('../../assets/images/pokeball-placeholder.png'); // Usa un placeholder adecuado
+// Asegúrate que la ruta a tu placeholder sea correcta
+const placeholderItem: ImageSourcePropType = require('../../assets/images/pokeball-placeholder.png');
 
+// Las Props ahora esperan detalles y cantidad directamente
 interface Props {
-  encounter: ItemEncounter;
+  itemDetails: Item;
+  quantity: number; // Esta será la cantidad total agrupada
 }
 
-export const ItemEncounterItem: React.FC<Props> = ({ encounter }) => {
-  const item = encounter.itemDetails;
+// Componente para renderizar un item (agrupado) en la lista
+export const ItemEncounterItem: React.FC<Props> = ({ itemDetails, quantity }) => {
+  // Usamos 'item' como alias para claridad dentro del componente
+  const item = itemDetails;
+
+  // Determina la fuente de la imagen: usa el sprite si existe, si no, el placeholder
+  const imageSource = item.sprite ? item.sprite : placeholderItem;
 
   return (
+    // Contenedor principal para el item de la lista
     <View style={styles.itemContainer}>
+      {/* Imagen/Sprite del item */}
       <Image
-        // Usa el sprite del item o el placeholder
-        source={item.sprite ? { uri: item.sprite } : placeholderItem}
+        source={imageSource}
         style={styles.sprite}
         resizeMode='contain'
-        defaultSource={placeholderItem} // Muestra placeholder mientras carga la URI
       />
+      {/* Contenedor para la información textual */}
       <View style={styles.infoContainer}>
+        {/* Nombre del item */}
         <Text style={styles.nameText}>{item.name}</Text>
-        {/* Muestra la descripción si existe */}
+        {/* Descripción del item (si existe), limitada a una línea */}
         {item.description && (
           <Text
             style={styles.descriptionText}
-            numberOfLines={1}
-            ellipsizeMode='tail'
+            numberOfLines={1} // Limita a una línea
+            ellipsizeMode='tail' // Añade '...' si el texto es muy largo
           >
             {item.description}
           </Text>
         )}
       </View>
-      {/* Muestra la cantidad encontrada (normalmente x1) */}
-      <Text style={styles.quantityText}>x {encounter.quantity}</Text>
+      {/* Muestra la cantidad total encontrada */}
+      <Text style={styles.quantityText}>x {quantity}</Text>
     </View>
   );
 };
 
+// --- Estilos ---
 const styles = StyleSheet.create({
   itemContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderColor: '#eee',
-    backgroundColor: '#fff', // Fondo blanco para diferenciar de cabeceras
+    flexDirection: 'row', // Alinea elementos horizontalmente
+    alignItems: 'center', // Centra elementos verticalmente
+    paddingVertical: 10, // Espaciado vertical interno
+    paddingHorizontal: 15, // Espaciado horizontal interno
+    borderBottomWidth: 1, // Línea separadora inferior
+    borderColor: '#eee', // Color de la línea separadora
+    backgroundColor: '#fff', // Fondo blanco para cada item
   },
   sprite: {
-    width: 35, // Sprite un poco más pequeño que el de Pokémon?
-    height: 35,
-    marginRight: 15,
+    width: 35, // Ancho del sprite
+    height: 35, // Alto del sprite
+    marginRight: 15, // Espacio a la derecha del sprite
   },
   infoContainer: {
-    flex: 1, // Ocupa el espacio disponible
-    justifyContent: 'center',
+    flex: 1, // Permite que este contenedor ocupe el espacio restante
+    justifyContent: 'center', // Centra el texto verticalmente si hay espacio extra
   },
   nameText: {
-    fontSize: 15,
-    fontWeight: '600', // Semi-bold
-    color: '#333',
+    fontSize: 15, // Tamaño de fuente para el nombre
+    fontWeight: '600', // Peso semi-bold
+    color: '#333', // Color de texto oscuro
+    marginBottom: 1, // Pequeño espacio bajo el nombre
   },
   descriptionText: {
-    fontSize: 12,
-    color: '#777', // Gris más claro para descripción
-    marginTop: 2,
+    fontSize: 12, // Tamaño más pequeño para la descripción
+    color: '#777', // Color grisáceo
+    // marginTop: 2, // Quitado para que esté más cerca del nombre
   },
   quantityText: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#555',
-    marginLeft: 10, // Separa de la info
+    fontSize: 15, // Mismo tamaño que el nombre
+    fontWeight: 'bold', // Texto en negrita para la cantidad
+    color: '#555', // Color gris oscuro
+    marginLeft: 10, // Espacio a la izquierda de la cantidad
+    minWidth: 30, // Ancho mínimo para alinear mejor números de 1 y 2 dígitos
+    textAlign: 'right', // Alinea el texto a la derecha dentro de su espacio
   },
 });

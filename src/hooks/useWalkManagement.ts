@@ -76,25 +76,65 @@ export const useWalkManagement = () => {
             distanceSinceLastCheck / ENCOUNTER_CHECK_DISTANCE_METERS
           );
           for (let j = 0; j < checksToMake; j++) {
-            // Intenta encontrar item
-            if (Math.random() < ITEM_FIND_PROBABILITY_BASE) {
-              const randomItemId =
-                FINDABLE_ITEM_IDS[
-                  Math.floor(Math.random() * FINDABLE_ITEM_IDS.length)
-                ];
-              const itemData = ITEMS_DB[randomItemId];
-              if (itemData) {
-                const quantityFound = 1;
-                addItem(itemData.id, quantityFound);
-                const itemEncounter: ItemEncounter = {
-                  id: `${Date.now()}-item-${itemData.id}-${i}-${j}`,
-                  type: 'item',
-                  itemDetails: itemData,
-                  location: currentPoint,
-                  quantity: quantityFound,
-                };
-                generatedEncountersList.push(itemEncounter);
-              }
+            // Decide si es Pokémon o Item (tu lógica existente)
+            // Ejemplo: if (randomEncounterType < POKEMON_ENCOUNTER_PROBABILITY) { ... generar Pokémon ... }
+            //          else if (randomEncounterType < POKEMON_ENCOUNTER_PROBABILITY + ITEM_FIND_PROBABILITY_BASE) { ... generar Item ... }
+    
+            // --- Bloque para Generar Item (Modificado) ---
+            // Asumamos que ya decidimos que es un item (ej. basado en ITEM_FIND_PROBABILITY_BASE)
+            // if (decision === 'generate_item') { // Reemplaza esto con tu condición real
+            // Ejemplo de condición:
+            if (Math.random() < ITEM_FIND_PROBABILITY_BASE) { // Probabilidad base de encontrar *un* item
+    
+                // 1. Filtrar items encontrables y calcular peso total
+                let totalDifficultyWeight = 0;
+                const validFindableItems = FINDABLE_ITEM_IDS.map(id => ITEMS_DB[id])
+                                                          .filter(itemData => itemData && typeof itemData.findDifficulty === 'number' && itemData.findDifficulty > 0);
+    
+                if (validFindableItems.length === 0) {
+                     console.warn("No valid findable items configured with findDifficulty > 0.");
+                     continue; // Salta a la siguiente iteración si no hay items válidos
+                }
+    
+                validFindableItems.forEach(itemData => {
+                    totalDifficultyWeight += itemData.findDifficulty!; // Suma las dificultades (probabilidades)
+                });
+    
+                // 2. Generar número aleatorio ponderado
+                const randomWeight = Math.random() * totalDifficultyWeight;
+    
+                // 3. Seleccionar Item basado en el peso
+                let selectedItemData = null;
+                let currentWeightSum = 0;
+                for (const itemData of validFindableItems) {
+                    currentWeightSum += itemData.findDifficulty!;
+                    if (randomWeight <= currentWeightSum) {
+                        selectedItemData = itemData;
+                        break; // Item encontrado
+                    }
+                }
+    
+                // 4. Si se seleccionó un item (debería ocurrir si totalDifficultyWeight > 0)
+                if (selectedItemData) {
+                     console.log(`Selected item by difficulty: ${selectedItemData.name} (Difficulty: ${selectedItemData.findDifficulty})`);
+                    const quantityFound = 1; // O podrías aleatorizar la cantidad también
+                    // Llama a addItem del BackpackContext
+                    addItem(selectedItemData.id, quantityFound); // Asegúrate que addItem esté disponible aquí
+    
+                    // Crea el registro del encuentro para el resumen
+                    const itemEncounter: ItemEncounter = {
+                        id: `${Date.now()}-item-${selectedItemData.id}-${i}-${j}`,
+                        type: 'item',
+                        itemDetails: selectedItemData,
+                        location: currentPoint, // Ubicación del encuentro
+                        quantity: quantityFound,
+                    };
+                    // Añade a la lista de encuentros generados
+                    // (asegúrate que esta variable exista en tu contexto)
+                    generatedEncountersList.push(itemEncounter);
+                } else {
+                     console.warn("Weighted item selection failed, even though total weight was > 0. This shouldn't happen.");
+                }
             }
             // Si no, intenta encontrar Pokémon
             else if (Math.random() < ENCOUNTER_PROBABILITY) {

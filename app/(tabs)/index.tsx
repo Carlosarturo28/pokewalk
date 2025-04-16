@@ -90,7 +90,7 @@ export default function CaminataScreen() {
             source={require('../../assets/images/walkinprogress.png')}
             style={styles.idleImage}
           />
-          <Text style={styles.placeholderTitle}>¡Caminata en Progreso!</Text>
+          <Text style={styles.placeholderTitle}>¡Aventura en Progreso!</Text>
           <Text style={styles.placeholderText}>
             Registrando tu ubicación...
           </Text>
@@ -109,7 +109,7 @@ export default function CaminataScreen() {
             color='#FFCC00'
             style={styles.activityIndicator}
           />
-          <Text style={styles.placeholderTitle}>Procesando Recorrido</Text>
+          <Text style={styles.placeholderTitle}>Procesando recorrido</Text>
           <Text style={styles.placeholderText}>
             Generando encuentros Pokémon...
           </Text>
@@ -133,7 +133,7 @@ export default function CaminataScreen() {
         />
         <Text style={styles.placeholderTitle}>Listo para Explorar</Text>
         <Text style={styles.placeholderText}>
-          Presiona "Iniciar Caminata" para comenzar.
+          Presiona "Iniciar Aventura" para comenzar.
         </Text>
       </View>
     );

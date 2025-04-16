@@ -141,7 +141,7 @@ export const useLocationTracking = () => {
         ...(Platform.OS === 'android' && {
             foregroundService: {
                 notificationTitle: 'Pokemon Walk', // Título más simple
-                notificationBody: 'Rastreando tu caminata...',
+                notificationBody: 'Rastreando tu aventura...',
                 notificationColor: '#FFCC00',
             }
         })

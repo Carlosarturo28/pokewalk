@@ -74,24 +74,24 @@ export default function RootLayout() {
   }
 
   return (
-    <PortalProvider>
-      <SafeAreaProvider>
-        <PortalHost name={NOTIFICATION_PORTAL_HOST} />
-        <NotificationProvider>
+<PortalProvider>
+  <SafeAreaProvider>
+  <PortalHost name={NOTIFICATION_PORTAL_HOST} />
+    <NotificationProvider>
+      <PokedexProvider>
+        <BackpackProvider>
           <PlayerProvider>
-            <PokedexProvider>
-              <BackpackProvider>
-                <WalkProvider>
-                  <Slot />
-                  <StatusBar barStyle={'dark-content'} />
-                  <PortalHost name={MODAL_PORTAL_HOST} />
-                </WalkProvider>
-              </BackpackProvider>
-            </PokedexProvider>
+            <WalkProvider>
+              <Slot />
+              <StatusBar barStyle={'dark-content'} />
+              <PortalHost name={MODAL_PORTAL_HOST} />
+            </WalkProvider>
           </PlayerProvider>
-        </NotificationProvider>
-      </SafeAreaProvider>
-    </PortalProvider>
+        </BackpackProvider>
+      </PokedexProvider>
+    </NotificationProvider>
+  </SafeAreaProvider>
+</PortalProvider>
   );
 }
 

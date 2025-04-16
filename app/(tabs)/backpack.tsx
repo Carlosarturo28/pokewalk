@@ -65,6 +65,7 @@ export default function BackpackScreen() {
     'medicine',
     'key',
     'other',
+    'money'
   ];
 
   // Construye el array 'sections' final en el orden definido
@@ -109,7 +110,7 @@ export default function BackpackScreen() {
               <Image
                 source={
                   itemData.item.sprite
-                    ? { uri: itemData.item.sprite }
+                    ? itemData.item.sprite
                     : placeholderItem
                 }
                 style={styles.itemSprite}

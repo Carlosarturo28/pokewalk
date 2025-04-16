@@ -1,4 +1,3 @@
-// app/(tabs)/pokedex.tsx
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -8,308 +7,246 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  // Quitado Button si no se usa directamente aquí
 } from 'react-native';
-// Usar alias
-import { PokedexListItem } from '@/components/pokedex/PokedexListItem'; // Item individual de la lista
-import { usePokedex } from '@/src/contexts/PokedexContext'; // Hook para acceder a datos Pokedex
-import { PokedexEntry, PokedexStatus } from '@/src/types'; // Tipos necesarios
-import { SafeAreaView } from 'react-native-safe-area-context'; // Para evitar solapamiento con UI sistema
-import Ionicons from '@expo/vector-icons/Ionicons'; // Para icono de búsqueda
+import { PokedexListItem } from '@/components/pokedex/PokedexListItem'; // Ajusta ruta
+import { usePokedex } from '@/src/contexts/PokedexContext'; // Ajusta ruta
+import { PokedexEntry, PokedexStatus } from '@/src/types/Pokedex'; // Ajusta ruta
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { NATIONAL_POKEDEX_COUNT } from '@/src/utils/constants'; // Ajusta ruta
 
-// Tipos para el filtro de estado ('all' | PokedexStatus.Seen | PokedexStatus.Caught)
+import { AchievementModal } from '@/components/achievements/AchievementModal';
+// Importa usePlayer para los contadores de logros (si es necesario aquí, aunque ya están en Pokedex)
+// import { usePlayer } from '@/src/contexts/PlayerContext';
+
 type StatusFilter = PokedexStatus | 'all';
 
-export default function PokedexScreenWithSearch() {
-  // Obtiene datos y estado de carga del contexto Pokedex
-  const { pokedex, isPokedexLoading } = usePokedex();
-  // Estado para el término de búsqueda introducido por el usuario
+export default function PokedexScreenWithAchievements() {
+  const { pokedex, isPokedexLoading: isPokedexInternalLoading } = usePokedex();
+  // Añadir estado de carga de Player si se usa para contadores aquí
+  // const { isPlayerLoading: isPlayerContextLoading } = usePlayer();
   const [searchTerm, setSearchTerm] = useState('');
-  // Estado para el filtro de estado seleccionado (Visto, Capturado, Todos)
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all'); // Inicia mostrando todos
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [isAchievementModalVisible, setIsAchievementModalVisible] = useState(false);
 
-  // `useMemo` recalcula la lista filtrada solo cuando cambian las dependencias (pokedex, searchTerm, statusFilter)
-  // Esto optimiza el rendimiento al no recalcular en cada renderizado.
-  const filteredPokedexIds = useMemo(() => {
-    // 1. Convertir el Map de la Pokédex a un array de objetos PokedexEntry
+  // Combinar estados de carga
+  const isOverallLoading = isPokedexInternalLoading; // Añade || isPlayerContextLoading si usas datos de player aquí
+
+  // useMemo para calcular datos filtrados y contadores
+  const { filteredPokedexIds, seenCount, caughtCount } = useMemo(() => {
+    // Usa el Map de pokedex directamente
     const pokedexArray = Array.from(pokedex.values());
 
-    // 2. Aplicar el filtro de ESTADO seleccionado por los botones
+    // Calcular contadores
+    const currentCaughtCount = pokedexArray.filter(
+      (e) => e.status === PokedexStatus.Caught
+    ).length;
+    const currentSeenCount = pokedexArray.filter(
+      (e) => e.status === PokedexStatus.Seen
+    ).length;
+
+    // Filtrar por estado
     let statusFilteredPokemon: PokedexEntry[];
     if (statusFilter === PokedexStatus.Seen) {
-      // Filtra para incluir solo los 'Vistos'
       statusFilteredPokemon = pokedexArray.filter(
         (entry) => entry.status === PokedexStatus.Seen
       );
     } else if (statusFilter === PokedexStatus.Caught) {
-      // Filtra para incluir solo los 'Capturados'
       statusFilteredPokemon = pokedexArray.filter(
         (entry) => entry.status === PokedexStatus.Caught
       );
     } else {
-      // Si el filtro es 'all', usamos TODAS las entradas (incluyendo 'Unknown')
       statusFilteredPokemon = pokedexArray;
     }
 
-    // 3. Aplicar el filtro de BÚSQUEDA por texto (Nombre o ID)
+    // Filtrar por búsqueda
     let finalFilteredPokemon: PokedexEntry[];
-    const trimmedSearchTerm = searchTerm.trim(); // Quitar espacios extra
+    const trimmedSearchTerm = searchTerm.trim();
 
     if (!trimmedSearchTerm) {
-      // Si no hay texto en la barra de búsqueda, el resultado es la lista filtrada por estado
       finalFilteredPokemon = statusFilteredPokemon;
     } else {
-      // Si hay texto en la barra de búsqueda:
       const lowerCaseSearchTerm = trimmedSearchTerm.toLowerCase();
       finalFilteredPokemon = statusFilteredPokemon.filter((entry) => {
-        // *** CONDICIÓN IMPORTANTE ***
-        // Solo se consideran para la búsqueda los Pokémon que NO son 'Unknown'
-        if (entry.status === PokedexStatus.Unknown) {
-          return false; // Excluye los desconocidos de los resultados de la BÚSQUEDA
+        if (statusFilter === 'all' && entry.status === PokedexStatus.Unknown) {
+            return entry.pokemonId.toString().includes(lowerCaseSearchTerm);
         }
-
-        // Si es 'Seen' o 'Caught', compara con el término de búsqueda
-        const nameMatch = entry.name
-          .toLowerCase()
-          .includes(lowerCaseSearchTerm);
-        const idMatch = entry.pokemonId
-          .toString()
-          .includes(lowerCaseSearchTerm);
-        return nameMatch || idMatch; // Devuelve true si coincide nombre O ID
+        else if (entry.status !== PokedexStatus.Unknown) {
+            const nameMatch = entry.name.toLowerCase().includes(lowerCaseSearchTerm);
+            const idMatch = entry.pokemonId.toString().includes(lowerCaseSearchTerm);
+            return nameMatch || idMatch;
+        }
+        return false;
       });
     }
 
-    // 4. Ordenar el resultado final por ID de Pokémon
-    return (
-      finalFilteredPokemon
-        .sort((a, b) => a.pokemonId - b.pokemonId)
-        // Mapea para obtener solo el array de IDs, que es lo que necesita FlatList
-        .map((entry) => entry.pokemonId)
-    );
-  }, [pokedex, searchTerm, statusFilter]); // Dependencias del useMemo
+    // Ordenar y mapear a IDs
+    const finalIds = finalFilteredPokemon
+      .sort((a, b) => a.pokemonId - b.pokemonId)
+      .map((entry) => entry.pokemonId);
 
-  // Renderizado condicional mientras carga la Pokédex
-  if (isPokedexLoading) {
+    return {
+      filteredPokedexIds: finalIds,
+      seenCount: currentSeenCount,
+      caughtCount: currentCaughtCount,
+    };
+  }, [pokedex, searchTerm, statusFilter]); // Dependencias correctas
+
+  // Cálculo de Progreso
+  // Usar pokedex.size como total si la pokedex se inicializa completa
+  const totalPokedexEntries = pokedex.size > 0 ? pokedex.size : NATIONAL_POKEDEX_COUNT; // Más dinámico
+  const progressPercent = totalPokedexEntries > 0 ? (caughtCount / totalPokedexEntries) * 100 : 0;
+
+  // Renderizado condicional mientras carga
+  if (isOverallLoading) {
     return (
-      <SafeAreaView style={styles.centered}>
-        <ActivityIndicator size='large' color='#FFCC00' />
-        <Text>Cargando Pokédex...</Text>
-      </SafeAreaView>
+        <SafeAreaView style={styles.centered}>
+            <ActivityIndicator size='large' color='#FFCC00' />
+            <Text>Cargando Datos...</Text>
+        </SafeAreaView>
     );
   }
 
-  // Renderizado principal de la pantalla
+  // Renderizado principal
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Título de la pantalla */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: '#E3350D'}}>
         <Text style={styles.mainTitle}>Pokédex Nacional</Text>
+        <TouchableOpacity
+                  onPress={() => setIsAchievementModalVisible(true)}
+                  style={{ marginRight: 15 }}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                  <Ionicons name="ribbon-outline" size={28} color="#fff" />
+              </TouchableOpacity>
+              </View>
+        {/* Sección de Progreso */}
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressLabel}>
+            Progreso de la Pokédex: {caughtCount} / {totalPokedexEntries}
+          </Text>
+          <View style={styles.progressBarBackground}>
+            <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+          </View>
+        </View>
 
-        {/* Contenedor para la barra de búsqueda y los botones de filtro */}
+        {/* Contenedor de Búsqueda y Filtros */}
         <View style={styles.searchFilterContainer}>
-          {/* Barra de Búsqueda */}
           <View style={styles.searchWrapper}>
-            <Ionicons
-              name='search'
-              size={20}
-              color='#888'
-              style={styles.searchIcon}
-            />
-            <TextInput
-              style={styles.searchInput}
-              placeholder='Buscar Conocidos por Nombre/ID...' // Placeholder actualizado
-              placeholderTextColor='#999'
-              value={searchTerm} // Controlado por el estado
-              onChangeText={setSearchTerm} // Actualiza el estado al escribir
-              clearButtonMode='while-editing' // Muestra botón 'X' para limpiar (iOS)
-              autoCapitalize='none' // Evita capitalización automática
-              autoCorrect={false} // Desactiva autocorrección
-            />
+             <Ionicons name='search' size={20} color='#888' style={styles.searchIcon} />
+             <TextInput
+               style={styles.searchInput}
+               placeholder='Buscar por Nombre/ID...'
+               placeholderTextColor='#999'
+               value={searchTerm}
+               onChangeText={setSearchTerm}
+               clearButtonMode='while-editing'
+               autoCapitalize='none'
+               autoCorrect={false}
+             />
           </View>
 
-          {/* Botones de Filtro por Estado */}
+          {/* Botones de Filtro CON CONTADORES */}
           <View style={styles.filterButtonsContainer}>
+            {/* Botón Todos */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[
-                styles.filterButton,
-                statusFilter === 'all' && styles.filterButtonActive,
-              ]}
+              style={[styles.filterButton, statusFilter === 'all' && styles.filterButtonActive]}
               onPress={() => setStatusFilter('all')}
             >
-              {/* Botón para mostrar todos (incluyendo '?') */}
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  statusFilter === 'all' && styles.filterButtonTextActive,
-                ]}
-              >
+              <Text style={[styles.filterButtonText, statusFilter === 'all' && styles.filterButtonTextActive]}>
                 Todos
               </Text>
             </TouchableOpacity>
+
+            {/* Botón Escapados */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[
-                styles.filterButton,
-                statusFilter === PokedexStatus.Seen &&
-                  styles.filterButtonActive,
-              ]}
+              style={[styles.filterButton, statusFilter === PokedexStatus.Seen && styles.filterButtonActive]}
               onPress={() => setStatusFilter(PokedexStatus.Seen)}
             >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  statusFilter === PokedexStatus.Seen &&
-                    styles.filterButtonTextActive,
-                ]}
-              >
-                Vistos
-              </Text>
+              <View style={styles.filterButtonContent}>
+                  <Text style={[styles.filterButtonText, statusFilter === PokedexStatus.Seen && styles.filterButtonTextActive]}>
+                    Escapados
+                  </Text>
+                  <View style={[styles.countBadge, statusFilter === PokedexStatus.Seen && styles.countBadgeActive]}>
+                    <Text style={[styles.countBadgeText, statusFilter === PokedexStatus.Seen && styles.countBadgeTextActive]}>
+                      {seenCount}
+                    </Text>
+                  </View>
+              </View>
             </TouchableOpacity>
+
+            {/* Botón Atrapados */}
             <TouchableOpacity
               activeOpacity={0.7}
-              style={[
-                styles.filterButton,
-                statusFilter === PokedexStatus.Caught &&
-                  styles.filterButtonActive,
-              ]}
+              style={[styles.filterButton, statusFilter === PokedexStatus.Caught && styles.filterButtonActive]}
               onPress={() => setStatusFilter(PokedexStatus.Caught)}
             >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  statusFilter === PokedexStatus.Caught &&
-                    styles.filterButtonTextActive,
-                ]}
-              >
-                Capturados
-              </Text>
+               <View style={styles.filterButtonContent}>
+                  <Text style={[styles.filterButtonText, statusFilter === PokedexStatus.Caught && styles.filterButtonTextActive]}>
+                  Atrapados
+                  </Text>
+                   <View style={[styles.countBadge, statusFilter === PokedexStatus.Caught && styles.countBadgeActive]}>
+                     <Text style={[styles.countBadgeText, statusFilter === PokedexStatus.Caught && styles.countBadgeTextActive]}>
+                       {caughtCount}
+                     </Text>
+                   </View>
+               </View>
             </TouchableOpacity>
           </View>
-          {/* Futuro: Espacio para más filtros (ej. por Tipo, Generación) */}
         </View>
 
-        {/* Lista (Cuadrícula) de Pokémon */}
+        {/* Lista de Pokémon */}
         <FlatList
-          data={filteredPokedexIds} // Usa los IDs filtrados y ordenados
-          // Renderiza cada item usando el componente PokedexListItem
-          renderItem={({ item: pokemonId }) => (
-            <PokedexListItem pokemonId={pokemonId} />
-          )}
-          // Usa el ID del Pokémon como clave única para cada item
+          data={filteredPokedexIds}
+          renderItem={({ item: pokemonId }) => (<PokedexListItem pokemonId={pokemonId} />)}
           keyExtractor={(item) => item.toString()}
-          numColumns={3} // Muestra 3 columnas
-          contentContainerStyle={styles.listContainer} // Estilo del contenedor de la lista
-          // Componente a mostrar si la lista (después de filtrar) está vacía
-          ListEmptyComponent={
-            <Text style={styles.emptyListText}>
-              No se encontraron Pokémon con esos criterios.
-            </Text>
-          }
-          // Optimizaciones para listas largas (ajusta valores según necesidad)
-          initialNumToRender={18} // Elementos a renderizar inicialmente
-          maxToRenderPerBatch={12} // Elementos a renderizar por lote fuera de pantalla
-          windowSize={11} // Tamaño de la ventana de renderizado
-          keyboardShouldPersistTaps='handled' // Permite tocar botones mientras el teclado está abierto
+          numColumns={3}
+          contentContainerStyle={styles.listContainer}
+          ListEmptyComponent={<Text style={styles.emptyListText}>No se encontraron Pokémon.</Text>}
+          initialNumToRender={18}
+          maxToRenderPerBatch={12}
+          windowSize={11}
+          keyboardShouldPersistTaps='handled'
         />
       </View>
+
+      {/* Renderiza el Modal de Logros */}
+      <AchievementModal
+        isVisible={isAchievementModalVisible}
+        onClose={() => setIsAchievementModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
 
-// --- Estilos ---
+// --- Estilos (Copia los estilos completos de la respuesta anterior) ---
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#fff', // Fondo blanco para área segura
-  },
-  container: {
-    flex: 1, // Ocupa todo el espacio disponible
-  },
-  centered: {
-    // Estilo para centrar contenido (ej. ActivityIndicator)
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  mainTitle: {
-    // Estilo del título principal
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#E3350D', // Rojo Pokémon
-    color: 'white',
-  },
-  searchFilterContainer: {
-    // Contenedor de búsqueda y filtros
-    padding: 10,
-    backgroundColor: '#f8f8f8', // Fondo gris claro
-    borderBottomWidth: 1,
-    borderColor: '#eee', // Borde inferior sutil
-  },
-  searchWrapper: {
-    // Contenedor de la barra de búsqueda
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fff', // Fondo blanco
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 10, // Espacio antes de los botones de filtro
-    borderWidth: 1,
-    borderColor: '#ddd', // Borde gris claro
-  },
-  searchIcon: {
-    // Icono de lupa
-    marginRight: 8,
-  },
-  searchInput: {
-    // Campo de texto para buscar
-    flex: 1, // Ocupa el espacio restante
-    height: 40,
-    fontSize: 16,
-    color: '#333', // Color de texto oscuro
-  },
-  filterButtonsContainer: {
-    // Contenedor de los botones de filtro
-    flexDirection: 'row',
-    justifyContent: 'flex-start', // Distribuye espacio entre botones
-  },
-  filterButton: {
-    // Estilo base de un botón de filtro
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20, // Bordes redondeados
-    borderWidth: 1,
-    borderColor: '#ccc', // Borde gris
-    backgroundColor: '#fff', // Fondo blanco
-    marginRight: 8,
-  },
-  filterButtonActive: {
-    // Estilo cuando un botón de filtro está activo
-    backgroundColor: '#E3350D', // Fondo rojo Pokémon
-    borderColor: '#E3350D', // Borde rojo
-  },
-  filterButtonText: {
-    // Texto dentro de un botón de filtro inactivo
-    color: '#555', // Gris oscuro
-    fontWeight: '500',
-    fontSize: 13,
-  },
-  filterButtonTextActive: {
-    // Texto dentro de un botón de filtro activo
-    color: '#fff', // Texto blanco
-    fontWeight: 'bold',
-  },
-  listContainer: {
-    // Estilo del contenedor interno de FlatList
-    padding: 5, // Pequeño padding alrededor de la cuadrícula
-  },
-  emptyListText: {
-    // Texto si la lista está vacía
-    textAlign: 'center',
-    marginTop: 50,
-    fontSize: 16,
-    color: '#666', // Gris
-  },
+    safeArea: { flex: 1, backgroundColor: '#fff' },
+    container: { flex: 1 },
+    centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    mainTitle: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', paddingVertical: 15, marginLeft: 15, color: 'white' },
+    progressContainer: { paddingVertical: 10, paddingHorizontal: 15, backgroundColor: '#f0f0f0', },
+    progressLabel: { fontSize: 13, color: '#555', marginBottom: 5, fontWeight: '500', textAlign: 'center', },
+    progressBarBackground: { height: 8, backgroundColor: '#e0e0e0', borderRadius: 4, overflow: 'hidden', },
+    progressBarFill: { height: '100%', backgroundColor: '#4CAF50', borderRadius: 4, },
+    searchFilterContainer: { padding: 10, backgroundColor: '#f8f8f8', borderBottomWidth: 1, borderColor: '#eee' },
+    searchWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, paddingHorizontal: 10, marginBottom: 10, borderWidth: 1, borderColor: '#ddd' },
+    searchIcon: { marginRight: 8 },
+    searchInput: { flex: 1, height: 40, fontSize: 16, color: '#333' },
+    filterButtonsContainer: { flexDirection: 'row', justifyContent: 'flex-start', alignItems: 'center' },
+    filterButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 16, borderWidth: 1, borderColor: '#ccc', backgroundColor: '#fff', marginRight: 8, minHeight: 32, },
+    filterButtonActive: { backgroundColor: '#E3350D', borderColor: '#E3350D' },
+    filterButtonContent: { flexDirection: 'row', alignItems: 'center', },
+    filterButtonText: { color: '#555', fontWeight: '500', fontSize: 13, marginRight: 6 },
+    filterButtonTextActive: { color: '#fff', fontWeight: 'bold' },
+    countBadge: { backgroundColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, height: 20, justifyContent: 'center', alignItems: 'center', marginLeft: 'auto', }, // marginLeft auto puede o no funcionar bien
+    countBadgeActive: { backgroundColor: 'rgba(255, 255, 255, 0.3)', },
+    countBadgeText: { color: '#444', fontSize: 11, fontWeight: 'bold', },
+    countBadgeTextActive: { color: '#fff', },
+    listContainer: { padding: 5 },
+    emptyListText: { textAlign: 'center', marginTop: 50, fontSize: 16, color: '#666' },
 });
