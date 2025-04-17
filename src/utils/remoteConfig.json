@@ -14,7 +14,14 @@
         },
         "itemFindDifficulties": {
           "pokeball": 0.95,
-          "greatball": 0.75
+          "greatball": 0.75,
+          "ultraball": 0.65,
+          "masterball": 0.025,
+          "poke-coin": 0.7,
+          "razz-berry": 0.75,
+          "golden-razz-berry": 0.55,
+          "lucky-egg": 0.14,
+          "shiny-charm": 0.07
         },
         "shinyRateMultiplier": 1.0
       }

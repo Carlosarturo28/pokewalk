@@ -2,7 +2,7 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 // Usar alias
 import { usePokedexManagement } from '@/src/hooks/usePokedexManagement';
-import { PokedexEntry, PokedexStatus } from '@/src/types';
+import { PokedexEntry, PokedexStatus, PokemonTypeInfo } from '@/src/types';
 
 interface PokedexContextProps {
   pokedex: Map<number, PokedexEntry>;
@@ -13,7 +13,8 @@ interface PokedexContextProps {
     newStatus: PokedexStatus,
     spriteUrl?: string | null,
     isCaughtShiny?: boolean,
-    caughtWithBallId?: string | null // <-- AÑADIDO
+    caughtWithBallId?: string | null,
+    pokemonTypes?: PokemonTypeInfo[]
   ) => void;
   getPokemonStatus: (pokemonId: number) => PokedexStatus;
   getPokedexEntry: (pokemonId: number) => PokedexEntry | undefined;

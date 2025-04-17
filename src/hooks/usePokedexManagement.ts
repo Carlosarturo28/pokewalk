@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 // Usar alias (asegúrate que estén configurados en tsconfig.json o babel.config.js)
-import { PokedexEntry, PokedexStatus } from '@/src/types';
+import { PokedexEntry, PokedexStatus, PokemonTypeInfo } from '@/src/types';
 import {
   getNationalPokedexSpeciesList,
   getPokemonIdFromSpeciesUrl,
@@ -157,71 +157,60 @@ export const usePokedexManagement = () => {
   }, [pokedex, isLoading]);
 
   // --- Actualizar Entrada (AHORA ACEPTA caughtWithBallId) ---
-  const updatePokedexEntry = useCallback(
-    (
-      pokemonId: number,
-      newStatus: PokedexStatus,
-      spriteUrl?: string | null,
-      isCaughtShiny: boolean = false, // Parámetro para indicar si la captura fue shiny
-      caughtWithBallId: string | null = null // Parámetro para el ID de la pokeball usada
-    ) => {
-      setPokedex((prevPokedex) => {
+  const updatePokedexEntry = useCallback((
+    pokemonId: number,
+    newStatus: PokedexStatus,
+    spriteUrl?: string | null,
+    isCaughtShiny: boolean = false, // Mantenemos nombre original
+    caughtWithBallId: string | null = null, // Mantenemos nombre original
+    pokemonTypes?: PokemonTypeInfo[] // <-- NUEVO PARÁMETRO OPCIONAL
+) => {
+    setPokedex(prevPokedex => {
         const currentEntry = prevPokedex.get(pokemonId);
-        // Si la entrada no existe por alguna razón, no hacer nada
         if (!currentEntry) {
-          console.warn(
-            `Attempted to update non-existent Pokedex entry ID: ${pokemonId}`
-          );
-          return prevPokedex;
+            console.warn(`Attempted update non-existent Pokedex entry: ID ${pokemonId}`);
+            return prevPokedex;
         }
 
+        // Determinar qué necesita actualizarse
         const shouldUpdateStatus = newStatus > currentEntry.status;
-        // Actualizar sprite si tenemos uno nuevo Y (no teníamos uno O el nuevo estado es Capturado)
-        const shouldUpdateSprite =
-          spriteUrl &&
-          (!currentEntry.spriteUrl || newStatus === PokedexStatus.Caught);
-        // Solo actualizar detalles de captura si el nuevo estado es Capturado
-        const shouldUpdateCaptureDetails = newStatus === PokedexStatus.Caught;
+        // Actualizar sprite si es nuevo Y (no teníamos O se capturó)
+        const shouldUpdateSprite = spriteUrl && (!currentEntry.spriteUrl || newStatus === PokedexStatus.Caught);
+        // Actualizar detalles de captura SOLO si el estado es 'Caught' y los detalles cambian
+        const shouldUpdateCaptureDetails = newStatus === PokedexStatus.Caught &&
+                                           (currentEntry.isCaughtShiny !== isCaughtShiny || currentEntry.caughtWithBallId !== caughtWithBallId);
+        // Actualizar tipos SOLO si se proporcionan y no los teníamos ya
+        const shouldUpdateTypes = pokemonTypes && !currentEntry.types;
 
-        // Si no hay nada que actualizar, devuelve el estado anterior para evitar re-renderizados
-        if (
-          !shouldUpdateStatus &&
-          !shouldUpdateSprite &&
-          !shouldUpdateCaptureDetails
-        ) {
-          return prevPokedex;
+        // Si nada cambió, retornar el mapa anterior
+        if (!shouldUpdateStatus && !shouldUpdateSprite && !shouldUpdateCaptureDetails && !shouldUpdateTypes) {
+            return prevPokedex;
         }
 
-        // Crea una copia del mapa para modificarlo
-        const newPokedex = new Map(prevPokedex);
-        // Crea la entrada actualizada combinando la actual con los cambios
+        // Crear entrada actualizada
         const updatedEntry: PokedexEntry = {
-          ...currentEntry,
-          status: shouldUpdateStatus ? newStatus : currentEntry.status,
-          spriteUrl: shouldUpdateSprite ? spriteUrl : currentEntry.spriteUrl,
-          // Actualiza detalles de captura SOLO si el nuevo estado es 'Caught'
-          isCaughtShiny: shouldUpdateCaptureDetails
-            ? isCaughtShiny
-            : currentEntry.isCaughtShiny ?? false,
-          caughtWithBallId: shouldUpdateCaptureDetails
-            ? caughtWithBallId
-            : currentEntry.caughtWithBallId ?? null,
-        };
-        // Establece la entrada actualizada en el nuevo mapa
+             ...currentEntry,
+             status: shouldUpdateStatus ? newStatus : currentEntry.status,
+             spriteUrl: shouldUpdateSprite ? spriteUrl : currentEntry.spriteUrl,
+             // Si se capturó, actualiza detalles de captura, si no, mantiene los anteriores
+             isCaughtShiny: newStatus === PokedexStatus.Caught ? isCaughtShiny : currentEntry.isCaughtShiny,
+             caughtWithBallId: newStatus === PokedexStatus.Caught ? caughtWithBallId : currentEntry.caughtWithBallId,
+             // Guarda los tipos si se proporcionaron y no existían
+             types: shouldUpdateTypes ? pokemonTypes : currentEntry.types,
+         };
+
+        // Si se está marcando como capturado y se provee un sprite, usar ese sprite
+         if (newStatus === PokedexStatus.Caught && spriteUrl) {
+            updatedEntry.spriteUrl = spriteUrl;
+        }
+
+        // Crear nueva copia del mapa y actualizar la entrada
+        const newPokedex = new Map(prevPokedex);
         newPokedex.set(pokemonId, updatedEntry);
-        console.log(
-          `Pokedex entry updated: ID ${pokemonId}, Status: ${
-            PokedexStatus[updatedEntry.status]
-          }, ShinyCaught: ${updatedEntry.isCaughtShiny}, BallID: ${
-            updatedEntry.caughtWithBallId
-          }, Sprite: ${updatedEntry.spriteUrl ? 'Yes' : 'No'}`
-        );
-        // Devuelve el nuevo mapa, lo que disparará el useEffect de guardado (debounced)
+        // console.log(`Pokedex entry updated: ID ${pokemonId}, Status: ${PokedexStatus[updatedEntry.status]}, Types: ${updatedEntry.types ? 'Yes' : 'No'}`);
         return newPokedex;
-      });
-    },
-    [] // No tiene dependencias externas, solo modifica el estado interno
-  );
+    });
+}, []); // Sin dependencias externas
 
   // --- Getters (sin cambios en su lógica interna, solo asegurando que estén aquí) ---
   const getPokemonStatus = useCallback(

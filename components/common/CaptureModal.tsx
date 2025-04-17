@@ -134,7 +134,8 @@ export const CaptureModal: React.FC<Props> = ({
           PokedexStatus.Caught,
           isShiny ? pokemon.sprites.front_shiny : pokemon.sprites.front_default,
           isShiny,
-          pokeballId
+          pokeballId,
+          pokemon.types
         );
         markEncounterAsCaught(encounter!.id);
         let xpMultiplier = 1.0;

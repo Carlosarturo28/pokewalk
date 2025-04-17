@@ -26,7 +26,7 @@ const ACHIEVEMENT_PROGRESS_STORAGE_KEY = '@PokemonWalkApp:achievementProgress_v1
 import { usePokedex } from '@/src/contexts/PokedexContext'; // Ajusta ruta
 import { useBackpack } from '@/src/contexts/BackpackContext'; // Ajusta ruta
 import { useNotification } from '@/src/contexts/NotificationContext'; // Ajusta ruta
-import { PokedexStatus } from '@/src/types/Pokedex'; // Ajusta ruta
+import { PokedexEntry, PokedexStatus } from '@/src/types/Pokedex'; // Ajusta ruta
 import { getPokemonDetails } from '@/src/services/pokeapi'; // Ajusta ruta
 import { ItemId } from '@/src/types/Item'; // Ajusta ruta
 
@@ -131,31 +131,37 @@ export const usePlayerManagement = () => {
   }, [achievementProgressMap, isLoadingAchievements]);
 
 
-  // --- Lógica de Logros ---
-  // calculateCurrentProgress AHORA recibe el contador actualizado
-  const calculateCurrentProgress = useCallback(async (
+    // --- Lógica de Logros ---
+    const calculateCurrentProgress = useCallback(async (
       achievement: AchievementDefinition,
-      currentTotalPokemonCaught: number // Recibe el contador explícitamente
+      currentTotalPokemonCaught: number // Recibe contador
     ): Promise<number> => {
         switch(achievement.calculationType) {
             case 'TOTAL_CAPTURED':
-                // Usa el valor pasado como argumento
                 return currentTotalPokemonCaught;
             case 'POKEDEX_CAUGHT_COUNT':
-                // Este sigue dependiendo del estado de pokedex
                 return Array.from(pokedex.values()).filter(e => e.status === PokedexStatus.Caught).length;
             case 'POKEDEX_TYPE_CAUGHT_COUNT':
-                // ... (lógica para contar tipos, idealmente guardar tipos en PokedexEntry) ...
-                if (!achievement.calculationTarget) return 0; const targetType = achievement.calculationTarget.toLowerCase(); let typeCount = 0;
-                const caughtEntries = Array.from(pokedex.values()).filter(e => e.status === PokedexStatus.Caught);
-                for (const entry of caughtEntries) { try { const details = await getPokemonDetails(entry.pokemonId); const pokemonTypes = details?.types?.map(t => t.type.name.toLowerCase()) ?? []; if (pokemonTypes.includes(targetType)) { typeCount++; } } catch (e) { console.warn(`Could not fetch details for ${entry.name} to check type achievement.`); } }
-                return typeCount;
-            // Añadir casos para otros tipos de logros (ej. distancia)
-            // case 'TOTAL_DISTANCE': return playerStats.totalDistanceWalked;
+                if (!achievement.calculationTarget) return 0;
+                const targetType = achievement.calculationTarget.toLowerCase();
+                let typeCount = 0;
+                // Itera sobre el pokedex Map directamente
+                pokedex.forEach((entry: PokedexEntry) => { // Asegura tipo PokedexEntry
+                    // Verifica si está capturado Y si tiene tipos guardados
+                    if (entry.status === PokedexStatus.Caught && entry.types) {
+                        // Extrae los nombres de los tipos guardados
+                        const pokemonTypes = entry.types.map(t => t.type.name.toLowerCase());
+                        if (pokemonTypes.includes(targetType)) {
+                            typeCount++;
+                        }
+                    }
+                });
+                 // console.log(`[Achievement] Type ${targetType} count (from PokedexEntry): ${typeCount}`);
+                return typeCount; // Devuelve el conteo
             default:
                 return 0;
         }
-  }, [pokedex]); // Depende de pokedex (no de playerStats directamente)
+  }, [pokedex]);
 
 
   // checkAndClaimAchievements AHORA recibe el contador actualizado

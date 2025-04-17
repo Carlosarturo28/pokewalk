@@ -12,6 +12,7 @@ import { BackpackProvider } from '@/src/contexts/BackpackContext';
 import { PlayerProvider } from '@/src/contexts/PlayerContext';
 import { NotificationProvider } from '@/src/contexts/NotificationContext';
 import { PortalProvider, PortalHost } from '@gorhom/portal';
+import { RemoteConfigProvider } from '@/src/contexts/RemoteConfigContext';
 
 LogBox.ignoreLogs(['AsyncStorage has been extracted from react-native core']);
 
@@ -74,24 +75,26 @@ export default function RootLayout() {
   }
 
   return (
-<PortalProvider>
-  <SafeAreaProvider>
-  <PortalHost name={NOTIFICATION_PORTAL_HOST} />
-    <NotificationProvider>
-      <PokedexProvider>
-        <BackpackProvider>
-          <PlayerProvider>
-            <WalkProvider>
-              <Slot />
-              <StatusBar barStyle={'dark-content'} />
-              <PortalHost name={MODAL_PORTAL_HOST} />
-            </WalkProvider>
-          </PlayerProvider>
-        </BackpackProvider>
-      </PokedexProvider>
-    </NotificationProvider>
-  </SafeAreaProvider>
-</PortalProvider>
+    <PortalProvider>
+      <RemoteConfigProvider>
+        <SafeAreaProvider>
+          <PortalHost name={NOTIFICATION_PORTAL_HOST} />
+            <NotificationProvider>
+              <PokedexProvider>
+                <BackpackProvider>
+                  <PlayerProvider>
+                    <WalkProvider>
+                      <Slot />
+                      <StatusBar barStyle={'dark-content'} />
+                      <PortalHost name={MODAL_PORTAL_HOST} />
+                    </WalkProvider>
+                  </PlayerProvider>
+                </BackpackProvider>
+              </PokedexProvider>
+            </NotificationProvider>
+          </SafeAreaProvider>
+        </RemoteConfigProvider>
+    </PortalProvider>
   );
 }
 
