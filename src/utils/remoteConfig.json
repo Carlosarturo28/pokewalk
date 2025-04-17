@@ -1,0 +1,21 @@
+{
+    "currentEvent": {
+      "id": "water_weekend_01",
+      "isEventRunning": true,
+      "title": "¡Fin de Semana Acuático!",
+      "description": "¡Los Pokémon de tipo Agua aparecen con más frecuencia y podrías encontrar más Poké Balls!",
+      "imageUrl": "https://raw.githubusercontent.com/Carlosarturo28/pokewalk/refs/heads/main/assets/images/events/water-weekend.jpeg",
+      "startDate": "2025-04-15T00:00:00Z",
+      "endDate": "2025-04-20T00:00:00Z",
+      "boosts": {
+        "pokemonTypeRates": {
+          "water": 2.5
+        },
+        "itemFindDifficulties": {
+          "pokeball": 0.95,
+          "greatball": 0.75
+        },
+        "shinyRateMultiplier": 1.0
+      }
+    }
+  }
