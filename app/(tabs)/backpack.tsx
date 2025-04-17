@@ -1,5 +1,5 @@
 // app/(tabs)/backpack.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   SectionList,
   Image,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { useBackpack } from '@/src/contexts/BackpackContext';
 import { ITEMS_DB } from '@/src/utils/itemData'; // Base de datos de items
 import { Item, ItemCategory } from '@/src/types'; // Tipos necesarios
 import { SafeAreaView } from 'react-native-safe-area-context'; // Para evitar solapamiento con UI del sistema
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ShopModal } from '@/components/shop/ShopModal';
 
 // Placeholder si un item no tiene sprite definido
 const placeholderItem = require('../../assets/images/pokeball-placeholder.png');
@@ -25,6 +28,7 @@ interface BackpackSection {
 export default function BackpackScreen() {
   // Obtiene el estado de la mochila y el estado de carga desde el contexto
   const { backpack, isBackpackLoading } = useBackpack();
+  const [isShopVisible, setIsShopVisible] = useState(false);
 
   // Muestra un indicador de carga mientras se recuperan los datos de AsyncStorage
   if (isBackpackLoading) {
@@ -90,10 +94,16 @@ export default function BackpackScreen() {
   // --- Renderizado del Componente ---
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Título principal de la pantalla */}
-      <Text style={styles.mainTitle}>Mochila</Text>
-
-      {/* Si no hay secciones (mochila vacía), muestra un mensaje */}
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: '#8B4513'}}>
+          <Text style={styles.mainTitle}>Mochila</Text>
+            <Pressable
+              onPress={() => setIsShopVisible(true)}
+              style={{ marginRight: 15 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="storefront-outline" size={28} color="#fff" />
+            </Pressable>
+        </View>
       {sections.length === 0 ? (
         <View style={styles.centered}>
           <Text>Tu mochila está vacía.</Text>
@@ -140,6 +150,7 @@ export default function BackpackScreen() {
           contentContainerStyle={styles.listContainer} // Estilo para el contenedor del scroll
         />
       )}
+      <ShopModal isVisible={isShopVisible} onClose={() => setIsShopVisible(false)} />
     </SafeAreaView>
   );
 }
@@ -156,16 +167,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
-  mainTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    paddingVertical: 15,
-    backgroundColor: '#8B4513', // Marrón tipo mochila
-    color: 'white',
-    borderBottomWidth: 2,
-    borderBottomColor: '#5a2d0c',
-  },
+  mainTitle: { fontSize: 24, fontWeight: 'bold', textAlign: 'center', paddingVertical: 15, marginLeft: 15, color: 'white' },
   listContainer: {
     paddingBottom: 20, // Espacio al final de la lista
   },

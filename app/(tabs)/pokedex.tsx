@@ -113,15 +113,15 @@ export default function PokedexScreenWithAchievements() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", backgroundColor: '#E3350D'}}>
-        <Text style={styles.mainTitle}>Pokédex Nacional</Text>
-        <TouchableOpacity
-                  onPress={() => setIsAchievementModalVisible(true)}
-                  style={{ marginRight: 15 }}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                  <Ionicons name="ribbon-outline" size={28} color="#fff" />
-              </TouchableOpacity>
-              </View>
+          <Text style={styles.mainTitle}>Pokédex Nacional</Text>
+            <TouchableOpacity
+              onPress={() => setIsAchievementModalVisible(true)}
+              style={{ marginRight: 15 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="ribbon-outline" size={28} color="#fff" />
+            </TouchableOpacity>
+        </View>
         {/* Sección de Progreso */}
         <View style={styles.progressContainer}>
           <Text style={styles.progressLabel}>

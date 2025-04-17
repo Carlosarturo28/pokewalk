@@ -149,7 +149,9 @@ export const PokedexListItem: React.FC<Props> = ({ pokemonId }) => {
     return placeholderImage;
   };
 
+  
   const handlePress = () => {
+    console.log(entry)
     if (entry.status !== PokedexStatus.Unknown) {
       router.push(`/pokemon/${entry.pokemonId}`);
     }

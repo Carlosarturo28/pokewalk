@@ -181,8 +181,8 @@ export default function PokemonDetailScreen() {
             {ballIdUsed && ballSpriteUri && (
               <Image
                 source={
-                  ballSpriteUri.startsWith('http')
-                    ? { uri: ballSpriteUri }
+                  ballSpriteUri
+                    ? ballSpriteUri
                     : pokeballPlaceholder
                 }
                 style={styles.pokeballIcon}

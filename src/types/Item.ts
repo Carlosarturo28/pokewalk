@@ -29,5 +29,6 @@ export interface Item {
   description?: string; // Descripción corta para mostrar al usuario
   effect?: ItemEffect; // Objeto que define los efectos del item (si los tiene)
   findDifficulty?: number; // Valor numérico para calcular probabilidad de encontrarlo (1=común, 10+=raro)
+  price?: number;
   // Podrías añadir un flag 'consumable': boolean si fuera necesario diferenciar
 }

@@ -130,6 +130,64 @@ export const useBackpackManagement = () => {
     return success;
   }, []);
 
+  const buyItem = useCallback((itemIdToBuy: ItemId, quantity: number = 1): { success: boolean; message: string } => {
+    // 1. Validar Input
+    if (quantity <= 0) return { success: false, message: 'Cantidad inválida.'};
+    const itemData = ITEMS_DB[itemIdToBuy];
+    if (!itemData) return { success: false, message: 'Item no encontrado.'};
+    if (itemData.price === undefined || itemData.price < 0) {
+        return { success: false, message: `${itemData.name} no está a la venta.`};
+    }
+
+    // 2. Calcular Costo
+    const totalCost = itemData.price * quantity;
+
+    // 3. Verificar Monedas
+    const currentCoins = backpack.get('poke-coin') ?? 0; // Obtiene monedas actuales
+    if (currentCoins < totalCost) {
+        return { success: false, message: `¡PokéCoins insuficientes! Necesitas ${totalCost}, tienes ${currentCoins}.`};
+    }
+
+    // 4. Intentar Gastar Monedas Y Añadir Item (TRANSACCIÓN)
+    // Usamos setBackpack una sola vez para asegurar atomicidad (o lo más cercano)
+    let purchaseSuccessful = false;
+    let finalMessage = '';
+
+    setBackpack(prevBackpack => {
+        const coins = prevBackpack.get('poke-coin') ?? 0;
+        // Doble verificación por si el estado cambió entre la lectura y la actualización
+        if (coins < totalCost) {
+            console.warn("Purchase check failed: Not enough coins after state update.");
+            purchaseSuccessful = false;
+            finalMessage = `¡PokéCoins insuficientes! (Error de concurrencia?)`;
+            return prevBackpack; // No modificar
+        }
+
+        // Si hay suficientes monedas, proceder
+        const newBackpack = new Map(prevBackpack);
+
+        // Restar monedas
+        const remainingCoins = coins - totalCost;
+        if (remainingCoins > 0) {
+            newBackpack.set('poke-coin', remainingCoins);
+        } else {
+            newBackpack.delete('poke-coin'); // Quitar si es 0
+        }
+
+        // Añadir item comprado
+        const currentItemQuantity = newBackpack.get(itemIdToBuy) ?? 0;
+        newBackpack.set(itemIdToBuy, currentItemQuantity + quantity);
+
+        console.log(`Purchased ${quantity}x ${itemData.name} for ${totalCost} coins. Coins remaining: ${remainingCoins}. New item count: ${currentItemQuantity + quantity}`);
+        purchaseSuccessful = true;
+        finalMessage = `¡Compraste ${quantity} ${itemData.name}!`;
+        return newBackpack; // Devuelve el estado modificado
+    });
+
+    return { success: purchaseSuccessful, message: finalMessage };
+
+}, [backpack]); // Depende del estado de la mochila para leer monedas
+
   // --- Has Item ---
   const hasItem = useCallback((itemId: string) => (backpack.get(itemId) ?? 0) > 0, [backpack]);
 
@@ -154,8 +212,9 @@ export const useBackpackManagement = () => {
   return {
     backpack,
     isLoading,
-    addItem, // Función original
-    addItems, // <-- NUEVA FUNCIÓN EXPORTADA
+    addItem,
+    buyItem,
+    addItems,
     useItem,
     hasItem,
     resetBackpackData,

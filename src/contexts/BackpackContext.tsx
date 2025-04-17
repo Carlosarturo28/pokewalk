@@ -21,6 +21,7 @@ interface BackpackContextProps {
   useItem: (itemId: string, quantity?: number) => boolean;
   hasItem: (itemId: string) => boolean;
   resetBackpackData: () => Promise<void>;
+  buyItem: (itemIdToBuy: ItemId, quantity?: number) => { success: boolean; message: string };
 }
 
 const BackpackContext = createContext<BackpackContextProps | undefined>(
@@ -37,7 +38,8 @@ export const BackpackProvider: React.FC<{ children: ReactNode }> = ({
     backpack: backpackManagement.backpack,
     isBackpackLoading: backpackManagement.isLoading,
     addItem: backpackManagement.addItem,
-    addItems: backpackManagement.addItems, // <-- PASA LA NUEVA FUNCIÓN
+    addItems: backpackManagement.addItems,
+    buyItem: backpackManagement.buyItem,
     useItem: backpackManagement.useItem,
     hasItem: backpackManagement.hasItem,
     resetBackpackData: backpackManagement.resetBackpackData,
