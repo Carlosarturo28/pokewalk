@@ -1,29 +1,29 @@
 {
-    "currentEvent": {
-      "id": "water_weekend_01",
-      "isEventRunning": true,
-      "title": "¡Fin de Semana Acuático!",
-      "description": "¡Los Pokémon de tipo Agua aparecen con más frecuencia y podrías encontrar más Poké Balls!",
-      "imageUrl": "https://raw.githubusercontent.com/Carlosarturo28/pokewalk/refs/heads/main/assets/images/events/water-weekend.jpeg",
-      "badgeUrl": "https://raw.githubusercontent.com/Carlosarturo28/pokewalk/refs/heads/main/assets/images/events/water-weekend-badge.png",
-      "startDate": "2025-04-15T00:00:00Z",
-      "endDate": "2025-04-20T00:00:00Z",
-      "boosts": {
-        "pokemonTypeRates": {
-          "water": 8
-        },
-        "itemFindDifficulties": {
-          "pokeball": 0.002,
-          "greatball": 0.005,
-          "ultraball": 0.007,
-          "masterball": 0.9,
-          "poke-coin": 0.008,
-          "razz-berry": 0.005,
-          "golden-razz-berry": 0.07,
-          "lucky-egg": 0.2,
-          "shiny-charm": 0.8
-        },
-        "shinyRateMultiplier": 1.0
-      }
+  "currentEvent": {
+    "id": "water_weekend_01",
+    "isEventRunning": true,
+    "title": "¡Fin de Semana Acuático!",
+    "description": "¡Los Pokémon de tipo Agua aparecen con más frecuencia y podrías encontrar más Poké Balls!",
+    "imageUrl": "https://raw.githubusercontent.com/Carlosarturo28/pokewalk/refs/heads/main/assets/images/events/water-weekend.jpeg",
+    "badgeUrl": "https://raw.githubusercontent.com/Carlosarturo28/pokewalk/refs/heads/main/assets/images/events/water-weekend-badge.png",
+    "startDate": "2025-04-15T00:00:00Z",
+    "endDate": "2025-04-20T00:00:00Z",
+    "boosts": {
+      "pokemonTypeRates": {
+        "water": 8
+      },
+      "itemFindDifficulties": {
+        "pokeball": 1,
+        "greatball": 3,
+        "ultraball": 7,
+        "masterball": 90,
+        "poke-coin": 1,
+        "razz-berry": 4,
+        "golden-razz-berry": 7,
+        "lucky-egg": 70,
+        "shiny-charm": 80
+      },
+      "shinyRateMultiplier": 1.0
     }
   }
+}
