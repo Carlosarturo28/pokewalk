@@ -13,15 +13,15 @@
         "water": 8
       },
       "itemFindDifficulties": {
-        "pokeball": 15,
-        "poke-coin": 10,
-        "razz-berry": 20,
-        "greatball": 40,
+        "pokeball": 98,
+        "poke-coin": 98,
+        "razz-berry": 90,
+        "greatball": 85,
         "ultraball": 80,
-        "golden-razz-berry": 70,
-        "lucky-egg": 90,
-        "shiny-charm": 95,
-        "masterball": 98
+        "golden-razz-berry": 85,
+        "lucky-egg": 60,
+        "shiny-charm": 50,
+        "masterball": 50
       },
       "shinyRateMultiplier": 1.0
     }
